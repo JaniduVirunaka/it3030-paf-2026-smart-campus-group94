@@ -15,6 +15,13 @@ export const fetchFromAPI = async (endpoint, options = {}) => {
             throw new Error(`API error: ${response.status}`);
         }
 
+        // --- NEW FIX ---
+        // If the server returns 204 No Content (like our DELETE method does), 
+        // just return null instead of trying to parse empty data into JSON.
+        if (response.status === 204) {
+            return null;
+        }
+
         return await response.json();
     } catch (error) {
         console.error("Failed to fetch data:", error);
