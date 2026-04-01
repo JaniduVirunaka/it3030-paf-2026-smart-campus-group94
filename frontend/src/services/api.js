@@ -4,6 +4,9 @@ const BASE_URL = 'http://localhost:8080/api';
 export const fetchFromAPI = async (endpoint, options = {}) => {
     try {
         const response = await fetch(`${BASE_URL}${endpoint}`, {
+            // --- THIS IS THE CRITICAL FIX ---
+            // This tells the browser to send your Google Login session cookie!
+            credentials: 'include', 
             headers: {
                 'Content-Type': 'application/json',
                 ...options.headers,
@@ -15,7 +18,6 @@ export const fetchFromAPI = async (endpoint, options = {}) => {
             throw new Error(`API error: ${response.status}`);
         }
 
-        // --- NEW FIX ---
         // If the server returns 204 No Content (like our DELETE method does), 
         // just return null instead of trying to parse empty data into JSON.
         if (response.status === 204) {
