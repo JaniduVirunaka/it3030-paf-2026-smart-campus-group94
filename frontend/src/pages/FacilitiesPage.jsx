@@ -9,6 +9,9 @@ const FacilitiesPage = () => {
     const [formData, setFormData] = useState({
         name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE'
     });
+    
+    // NEW: A state to track if we are editing an existing room, or creating a new one
+    const [editingId, setEditingId] = useState(null);
 
     useEffect(() => {
         const loadResources = async () => {
@@ -31,11 +34,26 @@ const FacilitiesPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault(); 
         try {
-            const addedResource = await fetchFromAPI('/resources', {
-                method: 'POST',
-                body: JSON.stringify(formData)
-            });
-            setResources([...resources, addedResource]);
+            if (editingId) {
+                // --- NEW: The PUT Request (Update) ---
+                const updatedResource = await fetchFromAPI(`/resources/${editingId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(formData)
+                });
+                
+                // Find the old resource in our table and replace it with the newly updated one
+                setResources(resources.map(r => r.id === editingId ? updatedResource : r));
+                setEditingId(null); // Turn off edit mode
+            } else {
+                // --- The POST Request (Create) ---
+                const addedResource = await fetchFromAPI('/resources', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                setResources([...resources, addedResource]);
+            }
+            
+            // Clear the form
             setFormData({
                 name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE'
             });
@@ -44,22 +62,27 @@ const FacilitiesPage = () => {
         }
     };
 
-    // --- NEW: The Delete Function ---
-    const handleDelete = async (id) => {
-        // A built-in browser popup to make sure they didn't misclick!
-        if (!window.confirm("Are you sure you want to delete this resource?")) return;
+    // --- NEW: The Edit Button Click Handler ---
+    const handleEditClick = (resource) => {
+        setFormData(resource); // Fill the form with the resource's current data
+        setEditingId(resource.id); // Tell the app we are in edit mode
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll back to the top so they see the form
+    };
 
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this resource?")) return;
         try {
-            // Send the DELETE request to the Spring Boot URL: /api/resources/{id}
-            await fetchFromAPI(`/resources/${id}`, {
-                method: 'DELETE'
-            });
-            
-            // Instantly remove it from the table without refreshing the page
+            await fetchFromAPI(`/resources/${id}`, { method: 'DELETE' });
             setResources(resources.filter(resource => resource.id !== id));
         } catch (err) {
             alert("Failed to delete. Check if the server is running.");
         }
+    };
+
+    // --- NEW: A helper to cancel editing ---
+    const cancelEdit = () => {
+        setEditingId(null);
+        setFormData({ name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE' });
     };
 
     if (loading) return <p style={{ padding: '20px' }}>Loading facilities...</p>;
@@ -71,7 +94,9 @@ const FacilitiesPage = () => {
             <p>Manage all bookable rooms, labs, and equipment.</p>
 
             <div style={{ background: '#f9f9f9', padding: '20px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #ddd' }}>
-                <h3 style={{ marginTop: 0 }}>Add New Resource</h3>
+                {/* Dynamically change the title based on if we are editing or not */}
+                <h3 style={{ marginTop: 0 }}>{editingId ? "Edit Resource" : "Add New Resource"}</h3>
+                
                 <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     <input type="text" name="name" placeholder="Name (e.g., Mini Lab)" value={formData.name} onChange={handleInputChange} required style={{ padding: '8px', flex: '1 1 200px' }} />
                     <select name="type" value={formData.type} onChange={handleInputChange} style={{ padding: '8px', flex: '1 1 150px' }}>
@@ -87,9 +112,17 @@ const FacilitiesPage = () => {
                         <option value="ACTIVE">Active</option>
                         <option value="OUT_OF_SERVICE">Out of Service</option>
                     </select>
-                    <button type="submit" style={{ padding: '8px 16px', backgroundColor: '#0056b3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', flex: '1 1 100%' }}>
-                        Save Resource
+                    
+                    <button type="submit" style={{ padding: '8px 16px', backgroundColor: editingId ? '#28a745' : '#0056b3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', flex: editingId ? '1 1 45%' : '1 1 100%' }}>
+                        {editingId ? "Update Resource" : "Save Resource"}
                     </button>
+                    
+                    {/* NEW: Cancel button that only shows up when editing */}
+                    {editingId && (
+                        <button type="button" onClick={cancelEdit} style={{ padding: '8px 16px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', flex: '1 1 45%' }}>
+                            Cancel
+                        </button>
+                    )}
                 </form>
             </div>
 
@@ -102,7 +135,7 @@ const FacilitiesPage = () => {
                         <th>Location</th>
                         <th>Availability</th>
                         <th>Status</th>
-                        <th>Actions</th> {/* NEW: Added an Actions column header */}
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -118,8 +151,14 @@ const FacilitiesPage = () => {
                                     {resource.status}
                                 </span>
                             </td>
-                            {/* NEW: The Delete Button mapped to the ID of this specific row */}
                             <td>
+                                {/* NEW: Edit Button */}
+                                <button 
+                                    onClick={() => handleEditClick(resource)} 
+                                    style={{ padding: '4px 8px', backgroundColor: '#ffc107', color: 'black', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '5px' }}
+                                >
+                                    Edit
+                                </button>
                                 <button 
                                     onClick={() => handleDelete(resource.id)} 
                                     style={{ padding: '4px 8px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
