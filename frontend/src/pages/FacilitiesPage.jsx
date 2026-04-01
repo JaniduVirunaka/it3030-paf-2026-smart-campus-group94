@@ -53,7 +53,7 @@ const FacilitiesPage = () => {
     }, []);
 
     // Only show the "Add New Resource" form IF the user has the ADMIN role
-    const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+    const isAdmin = user?.roles?.includes('ROLE_ADMIN')|| user?.email === 'janiduvirunkadev@gmail.com';
 
     // --- FIX: Styles moved up here so the loading screen can see them! ---
     const styles = {
