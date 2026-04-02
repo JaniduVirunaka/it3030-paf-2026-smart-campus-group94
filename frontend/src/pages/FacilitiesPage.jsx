@@ -42,10 +42,18 @@ const FacilitiesPage = () => {
         checkAuth();
     }, []);
 
-     useEffect(() => {
+    useEffect(() => {
         const loadResources = async () => {
             try {
-                const data = await fetchFromAPI('/resources');
+                // Build the query string with our current filter states
+                const queryParams = new URLSearchParams({
+                    searchTerm: searchTerm,
+                    type: filterType,
+                    status: filterStatus
+                });
+                
+                // Fetch the explicitly filtered data from the backend
+                const data = await fetchFromAPI(`/resources?${queryParams.toString()}`);
                 setResources(data || []); 
                 setLoading(false);
             } catch (err) {
@@ -54,8 +62,16 @@ const FacilitiesPage = () => {
                 setLoading(false);
             }
         };
-        loadResources();
-    }, []);
+
+        // Debounce: Wait 500ms after the user stops typing before calling the API
+        const delayDebounceFn = setTimeout(() => {
+            loadResources();
+        }, 500);
+
+        // Cleanup the timer if the user types again before 500ms is up
+        return () => clearTimeout(delayDebounceFn);
+        
+    }, [searchTerm, filterType, filterStatus]); // <-- Re-run whenever these change
 
     const isAdmin = user?.roles?.includes('ROLE_ADMIN') || user?.email === 'janiduvirunkadev@gmail.com';
 
@@ -221,12 +237,8 @@ const FacilitiesPage = () => {
         }
     };
 
-    const filteredResources = (Array.isArray(resources) ? resources : []).filter(r => {
-        const matchesSearch = r.name.toLowerCase().includes(searchTerm.toLowerCase()) || r.location.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesType = filterType === 'ALL' || r.type === filterType;
-        const matchesStatus = filterStatus === 'ALL' || r.status === filterStatus;
-        return matchesSearch && matchesType && matchesStatus;
-    });
+    // NEW: Just use the resources directly from the backend
+    const displayResources = Array.isArray(resources) ? resources : [];
 
     return (
         <div style={styles.container}>
@@ -362,7 +374,7 @@ const FacilitiesPage = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredResources.map((r) => (
+                            {displayResources.map((r) => (
                                 <tr key={r.id} style={{ transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                                     <td style={{...styles.td, fontWeight: 'bold'}}>{r.name}</td>
                                     <td style={styles.td}>{r.type.replace('_', ' ')}</td>
@@ -382,7 +394,7 @@ const FacilitiesPage = () => {
                                     )}
                                 </tr>
                             ))}
-                            {filteredResources.length === 0 && (
+                            {displayResources.length === 0 && (
                                 <tr><td colSpan={isAdmin ? "7" : "6"} style={{...styles.td, textAlign: 'center', padding: '30px', color: '#7f8c8d'}}>No resources match your search criteria.</td></tr>
                             )}
                         </tbody>

@@ -37,9 +37,15 @@ public class ResourceController {
     }
 
     // 2. UPGRADED GET - Retrieve all active resources (Hides archived)
+   // UPGRADED GET - Server-Side Search and Filtering
     @GetMapping
-    public ResponseEntity<List<Resource>> getAllResources() {
-        List<Resource> resources = resourceService.getAllResources();
+    public ResponseEntity<List<Resource>> getAllResources(
+            @RequestParam(required = false, defaultValue = "") String searchTerm,
+            @RequestParam(required = false, defaultValue = "ALL") String type,
+            @RequestParam(required = false, defaultValue = "ALL") String status) {
+        
+        // Pass the parameters to our new Service method
+        List<Resource> resources = resourceService.searchAndFilterResources(searchTerm, type, status);
         return new ResponseEntity<>(resources, HttpStatus.OK);
     }
 
