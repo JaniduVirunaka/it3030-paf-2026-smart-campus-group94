@@ -3,18 +3,32 @@ package com.backend.backend.models;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+
 @Document(collection = "resources")
 public class Resource {
 
     @Id
     private String id;
-    
-    private String name;                // e.g., "Main Auditorium" or "Epson Projector"
-    private String type;                // e.g., "LECTURE_HALL", "LAB", "EQUIPMENT"
-    private int capacity;               // e.g., 150 (use 0 for equipment)
-    private String location;            // e.g., "Building A, 1st Floor"
+
+    @NotBlank(message = "Resource name is required and cannot be blank.")
+    private String name; // e.g., "Main Auditorium" or "Epson Projector"
+
+    @NotBlank(message = "Type is required (e.g., LECTURE_HALL, LAB).")
+    private String type; // e.g., "LECTURE_HALL", "LAB", "EQUIPMENT"
+
+    @Min(value = 0, message = "Capacity cannot be a negative number. Use 0 for items.")
+    private int capacity; // e.g., 150 (use 0 for equipment)
+
+    @NotBlank(message = "Location must be specified.")
+    private String location; // e.g., "Building A, 1st Floor"
+
+    @NotBlank(message = "Availability windows are required.")
     private String availabilityWindows; // e.g., "08:00-17:00"
-    private String status;              // e.g., "ACTIVE", "OUT_OF_SERVICE"
+
+    @NotBlank(message = "Status must be defined (e.g., ACTIVE, OUT_OF_SERVICE).")
+    private String status; // e.g., "ACTIVE", "OUT_OF_SERVICE"
 
     // Default Constructor
     public Resource() {}

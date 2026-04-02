@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/resources")
@@ -30,7 +31,7 @@ public class ResourceController {
 
     // 1. POST - Create a new resource in the catalogue
     @PostMapping
-    public ResponseEntity<Resource> createResource(@RequestBody Resource resource) {
+    public ResponseEntity<Resource> createResource(@Valid @RequestBody Resource resource) {
         Resource newResource = resourceService.createResource(resource);
         return new ResponseEntity<>(newResource, HttpStatus.CREATED);
     }
@@ -52,7 +53,7 @@ public class ResourceController {
 
     // 3. PUT - Update an existing resource
     @PutMapping("/{id}")
-    public ResponseEntity<Resource> updateResource(@PathVariable String id, @RequestBody Resource resourceDetails) {
+    public ResponseEntity<Resource> updateResource(@PathVariable String id, @Valid @RequestBody Resource resourceDetails) {
         Resource updatedResource = resourceService.updateResource(id, resourceDetails);
         if (updatedResource != null) {
             return new ResponseEntity<>(updatedResource, HttpStatus.OK);
