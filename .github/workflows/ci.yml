@@ -26,7 +26,7 @@ jobs:
       # Update 'backend/pom.xml' if your backend folder has a different name
       run: mvn -B clean install --file backend/pom.xml
 
-  # Job 2: Test the React Frontend
+# Job 2: Test the React Frontend & Run Playwright
   build-frontend:
     runs-on: ubuntu-latest
     steps:
@@ -39,8 +39,19 @@ jobs:
         node-version: '18'
         
     - name: Install Dependencies and Build
-      # Update 'frontend' if your React folder has a different name
       working-directory: ./frontend
       run: |
         npm install
         npm run build
+
+    - name: Install Playwright Browsers
+      working-directory: ./frontend
+      run: npx playwright install --with-deps
+
+    - name: Run Playwright Tests
+      working-directory: ./frontend
+      # We start the Vite server in the background, then run the tests!
+      run: |
+        npm run dev & 
+        npx wait-on http://localhost:5173
+        npx playwright test
