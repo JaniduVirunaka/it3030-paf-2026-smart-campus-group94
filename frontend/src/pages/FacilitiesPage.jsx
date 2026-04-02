@@ -6,6 +6,7 @@ const FacilitiesPage = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('ALL');
+    const [filterStatus, setFilterStatus] = useState('ALL');
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
         name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE'
@@ -123,23 +124,27 @@ const FacilitiesPage = () => {
     };
 
     // --- NEW: Handle CSV Export ---
-    const handleExportCSV = async () => {
+   const handleExportCSV = async () => {
         setIsExporting(true);
         try {
-            // Note: Using standard fetch because fetchFromAPI might expect JSON
-            // Assuming your backend runs on localhost:8080. Update if different.
-            const response = await fetch('http://localhost:8080/api/resources/export', {
+            // Build the URL with your current filter states
+            const exportUrl = new URL('http://localhost:8080/api/resources/export');
+            exportUrl.searchParams.append('searchTerm', searchTerm);
+            exportUrl.searchParams.append('type', filterType);
+            exportUrl.searchParams.append('status', filterStatus);
+
+            const response = await fetch(exportUrl.toString(), {
                 method: 'GET',
                 credentials: 'include',
-                // headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } // Uncomment if needed
             });
+            
             if (!response.ok) throw new Error('Export failed');
             
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', 'campus_resources.csv');
+            link.setAttribute('download', 'filtered_campus_resources.csv');
             document.body.appendChild(link);
             link.click();
             link.parentNode.removeChild(link);
@@ -187,7 +192,8 @@ const FacilitiesPage = () => {
     const filteredResources = (Array.isArray(resources) ? resources : []).filter(r => {
         const matchesSearch = r.name.toLowerCase().includes(searchTerm.toLowerCase()) || r.location.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesType = filterType === 'ALL' || r.type === filterType;
-        return matchesSearch && matchesType;
+        const matchesStatus = filterStatus === 'ALL' || r.status === filterStatus;
+        return matchesSearch && matchesType && matchesStatus;
     });
 
     return (
@@ -253,6 +259,11 @@ const FacilitiesPage = () => {
                         <option value="LAB">Laboratories</option>
                         <option value="EQUIPMENT">Equipment</option>
                         <option value="MEETING_ROOM">Meeting Rooms</option>
+                    </select>
+                    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={styles.input}>
+                        <option value="ALL">All Statuses</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="OUT_OF_SERVICE">Out of Service</option>
                     </select>
                 </div>
 

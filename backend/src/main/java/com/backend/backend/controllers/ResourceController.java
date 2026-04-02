@@ -74,20 +74,51 @@ public class ResourceController {
     }
 
     // EXPORT ENDPOINT
-    @GetMapping("/export")
-    public void exportResourcesToCSV(HttpServletResponse response) throws IOException {
+   @GetMapping("/export")
+    public void exportResourcesToCSV(
+            @RequestParam(required = false, defaultValue = "") String searchTerm,
+            @RequestParam(required = false, defaultValue = "ALL") String type,
+            @RequestParam(required = false, defaultValue = "ALL") String status,
+            HttpServletResponse response) throws IOException {
+
         response.setContentType("text/csv");
-        response.setHeader("Content-Disposition", "attachment; filename=\"campus_resources.csv\"");
+        response.setHeader("Content-Disposition", "attachment; filename=\"filtered_campus_resources.csv\"");
 
         PrintWriter writer = response.getWriter();
-
-        // Writing the headers to match your React form data!
         writer.println("Name,Type,Capacity,Location,AvailabilityWindows,Status");
 
-        // Mock data for testing the export download
-        writer.println("Mini Lab,LAB,30,Block B,08:00-17:00,ACTIVE");
-        writer.println("Main Hall,LECTURE_HALL,200,Main Building,08:00-20:00,ACTIVE");
-        writer.println("Sony Projector,EQUIPMENT,0,IT Dept,08:00-17:00,OUT_OF_SERVICE");
+        // 1. Fetch ALL resources (including archived ones)
+        List<Resource> allResources = resourceService.getAllResourcesIncludingArchived();
+
+        // 2. Filter the list in Java based on the parameters sent from React
+        List<Resource> filteredResources = allResources.stream().filter(r -> {
+            boolean matchesSearch = searchTerm.isEmpty() || 
+                (r.getName() != null && r.getName().toLowerCase().contains(searchTerm.toLowerCase())) ||
+                (r.getLocation() != null && r.getLocation().toLowerCase().contains(searchTerm.toLowerCase()));
+                
+            boolean matchesType = type.equals("ALL") || 
+                (r.getType() != null && r.getType().equalsIgnoreCase(type));
+                
+            boolean matchesStatus = status.equals("ALL") || 
+                (r.getStatus() != null && r.getStatus().equalsIgnoreCase(status));
+
+            return matchesSearch && matchesType && matchesStatus;
+        }).toList();
+
+        // 3. Write ONLY the filtered results to the CSV
+        for (Resource res : filteredResources) {
+            String name = res.getName() != null ? res.getName().replace(",", " ") : "";
+            String location = res.getLocation() != null ? res.getLocation().replace(",", " ") : "";
+            
+            writer.println(
+                name + "," +
+                res.getType() + "," +
+                res.getCapacity() + "," +
+                location + "," +
+                res.getAvailabilityWindows() + "," +
+                res.getStatus()
+            );
+        }
 
         writer.flush();
         writer.close();

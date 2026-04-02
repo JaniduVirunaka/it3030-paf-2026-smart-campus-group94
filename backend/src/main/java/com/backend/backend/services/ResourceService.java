@@ -32,6 +32,11 @@ public class ResourceService {
         return resourceRepository.findById(id);
     }
 
+    // NEW METHOD for the Export feature: Fetches absolutely everything
+    public List<Resource> getAllResourcesIncludingArchived() {
+        return resourceRepository.findAll(); 
+    }
+
     // 3. UPDATE (Will be used for PUT)
     // Finds an existing resource and updates its details
     public Resource updateResource(String id, Resource resourceDetails) {
