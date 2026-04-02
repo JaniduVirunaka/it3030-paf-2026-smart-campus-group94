@@ -8,11 +8,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/resources")
-@CrossOrigin(origins = "http://localhost:5173") // A safety net to ensure your React app can talk to this file
+@CrossOrigin(origins = "http://localhost:5173") 
 public class ResourceController {
 
     @Autowired
@@ -25,7 +26,7 @@ public class ResourceController {
         return new ResponseEntity<>(newResource, HttpStatus.CREATED);
     }
 
-    // 2. GET - Retrieve all resources for the frontend table/list
+    // 2. UPGRADED GET - Retrieve all active resources (Hides archived)
     @GetMapping
     public ResponseEntity<List<Resource>> getAllResources() {
         List<Resource> resources = resourceService.getAllResources();
@@ -40,7 +41,7 @@ public class ResourceController {
                        .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
-    // 3. PUT - Update an existing resource (e.g., changing status to OUT_OF_SERVICE)
+    // 3. PUT - Update an existing resource
     @PutMapping("/{id}")
     public ResponseEntity<Resource> updateResource(@PathVariable String id, @RequestBody Resource resourceDetails) {
         Resource updatedResource = resourceService.updateResource(id, resourceDetails);
@@ -50,10 +51,16 @@ public class ResourceController {
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    // 4. DELETE - Remove a resource from the catalogue
+    // 4. UPGRADED DELETE - Triggers the Soft Deletion
     @DeleteMapping("/{id}")
-    public ResponseEntity<HttpStatus> deleteResource(@PathVariable String id) {
-        resourceService.deleteResource(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    public ResponseEntity<?> deleteResource(@PathVariable String id) {
+        boolean isArchived = resourceService.softDeleteResource(id);
+        
+        if (isArchived) {
+            // Returns a nice JSON message to React
+            return ResponseEntity.ok().body(Map.of("success", true, "message", "Resource archived safely."));
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("success", false, "message", "Resource not found."));
+        }
     }
 }

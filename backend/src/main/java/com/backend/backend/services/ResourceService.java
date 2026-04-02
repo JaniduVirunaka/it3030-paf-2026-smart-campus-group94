@@ -21,9 +21,9 @@ public class ResourceService {
     }
 
     // 2. READ (Will be used for GET)
-    // Fetches all the resources in the catalogue
+    // UPGRADE: Filter out the ARCHIVED resources
     public List<Resource> getAllResources() {
-        return resourceRepository.findAll();
+        return resourceRepository.findByStatusNot("ARCHIVED");
     }
 
     // READ (Will be used for GET by ID)
@@ -52,8 +52,15 @@ public class ResourceService {
     }
 
     // 4. DELETE (Will be used for DELETE)
-    // Removes a resource entirely
-    public void deleteResource(String id) {
-        resourceRepository.deleteById(id);
+    // NEW: Soft Deletion Logic
+    public boolean softDeleteResource(String id) {
+        Optional<Resource> resourceOpt = resourceRepository.findById(id);
+        if (resourceOpt.isPresent()) {
+            Resource resource = resourceOpt.get();
+            resource.setStatus("ARCHIVED"); // Change status instead of deleting
+            resourceRepository.save(resource);
+            return true;
+        }
+        return false;
     }
 }
