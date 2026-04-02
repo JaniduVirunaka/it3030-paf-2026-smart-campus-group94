@@ -23,7 +23,11 @@ jobs:
         cache: maven
         
     - name: Build and Test Spring Boot
-      # Update 'backend/pom.xml' if your backend folder has a different name
+      # Inject fake environment variables just for the GitHub server to pass the test
+      env:
+        SPRING_DATA_MONGODB_URI: mongodb://localhost:27017/dummy_db
+        SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID: dummy-id
+        SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET: dummy-secret
       run: mvn -B clean install --file backend/pom.xml
 
 # Job 2: Test the React Frontend & Run Playwright
