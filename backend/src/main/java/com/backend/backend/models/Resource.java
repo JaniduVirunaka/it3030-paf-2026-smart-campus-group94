@@ -30,6 +30,8 @@ public class Resource {
     @NotBlank(message = "Status must be defined (e.g., ACTIVE, OUT_OF_SERVICE).")
     private String status; // e.g., "ACTIVE", "OUT_OF_SERVICE"
 
+    private String imageBase64;
+
     // Default Constructor
     public Resource() {}
 
@@ -65,4 +67,7 @@ public class Resource {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getImageBase64() { return imageBase64; }
+    public void setImageBase64(String imageBase64) { this.imageBase64 = imageBase64; }
 }

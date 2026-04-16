@@ -2,11 +2,17 @@ package com.backend.backend.controllers;
 
 import com.backend.backend.models.Resource;
 import com.backend.backend.services.ResourceService;
+import com.backend.backend.utils.QRCodeGenerator;
+import org.springframework.http.MediaType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile; // NEW: For file uploads
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedReader; // NEW: For reading the file
@@ -38,15 +44,26 @@ public class ResourceController {
 
     // 2. UPGRADED GET - Retrieve all active resources (Hides archived)
    // UPGRADED GET - Server-Side Search and Filtering
-    @GetMapping
-    public ResponseEntity<List<Resource>> getAllResources(
+  @GetMapping
+    public ResponseEntity<Page<Resource>> getAllResources(
             @RequestParam(required = false, defaultValue = "") String searchTerm,
             @RequestParam(required = false, defaultValue = "ALL") String type,
-            @RequestParam(required = false, defaultValue = "ALL") String status) {
-        
-        // Pass the parameters to our new Service method
-        List<Resource> resources = resourceService.searchAndFilterResources(searchTerm, type, status);
-        return new ResponseEntity<>(resources, HttpStatus.OK);
+            @RequestParam(required = false, defaultValue = "ALL") String status,
+            @RequestParam(defaultValue = "0") int page, // NEW: Which page they want (starts at 0)
+            @RequestParam(defaultValue = "10") int size // NEW: How many items per page
+    ) {
+        try {
+            // Bundle the page and size into a Pageable object
+            Pageable pageable = PageRequest.of(page, size);
+            
+            // Pass the search terms AND the pageable object to the service
+            Page<Resource> resources = resourceService.searchAndFilterResources(searchTerm, type, status, pageable);
+            
+            return ResponseEntity.ok(resources);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     // GET - Retrieve a single specific resource by its ID
@@ -80,7 +97,33 @@ public class ResourceController {
         }
     }
 
-    // EXPORT ENDPOINT
+    // 5. NEW: Generate QR Code for a specific resource
+    @GetMapping(value = "/{id}/qrcode", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<byte[]> generateResourceQRCode(@PathVariable String id) {
+        try {
+            Optional<Resource> resourceOpt = resourceService.getResourceById(id);
+            
+            if (resourceOpt.isPresent()) {
+                Resource resource = resourceOpt.get();
+                
+                String publicUrl = "https://ensure-alkalize-petal.ngrok-free.dev"; 
+                
+                // 2. We route it to a specific "mobile view" page
+                String qrText = publicUrl + "/resource/view/" + resource.getId();
+
+                // Generate a 250x250 pixel QR code
+                byte[] image = QRCodeGenerator.getQRCodeImage(qrText, 250, 250);
+                
+                return ResponseEntity.ok().body(image);
+            }
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+   // EXPORT ENDPOINT
    @GetMapping("/export")
     public void exportResourcesToCSV(
             @RequestParam(required = false, defaultValue = "") String searchTerm,
@@ -94,26 +137,14 @@ public class ResourceController {
         PrintWriter writer = response.getWriter();
         writer.println("Name,Type,Capacity,Location,AvailabilityWindows,Status");
 
-        // 1. Fetch ALL resources (including archived ones)
-        List<Resource> allResources = resourceService.getAllResourcesIncludingArchived();
+        // 1 & 2. Call the DB directly. Pageable.unpaged() grabs ALL matches, ignoring the 10-per-page limit.
+        Page<Resource> exportPage = resourceService.searchAndFilterResources(searchTerm, type, status, Pageable.unpaged());
+        
+        // Extract the raw List of data from the Page wrapper
+        List<Resource> resourcesToExport = exportPage.getContent();
 
-        // 2. Filter the list in Java based on the parameters sent from React
-        List<Resource> filteredResources = allResources.stream().filter(r -> {
-            boolean matchesSearch = searchTerm.isEmpty() || 
-                (r.getName() != null && r.getName().toLowerCase().contains(searchTerm.toLowerCase())) ||
-                (r.getLocation() != null && r.getLocation().toLowerCase().contains(searchTerm.toLowerCase()));
-                
-            boolean matchesType = type.equals("ALL") || 
-                (r.getType() != null && r.getType().equalsIgnoreCase(type));
-                
-            boolean matchesStatus = status.equals("ALL") || 
-                (r.getStatus() != null && r.getStatus().equalsIgnoreCase(status));
-
-            return matchesSearch && matchesType && matchesStatus;
-        }).toList();
-
-        // 3. Write ONLY the filtered results to the CSV
-        for (Resource res : filteredResources) {
+        // 3. Write the results to the CSV
+        for (Resource res : resourcesToExport) {
             String name = res.getName() != null ? res.getName().replace(",", " ") : "";
             String location = res.getLocation() != null ? res.getLocation().replace(",", " ") : "";
             

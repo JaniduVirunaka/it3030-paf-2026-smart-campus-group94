@@ -9,24 +9,28 @@ const FacilitiesPage = () => {
     const [filterStatus, setFilterStatus] = useState('ALL');
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
-        name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE'
+        name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE', imageBase64: ''
     });
     const [fieldErrors, setFieldErrors] = useState({});
 
     const [user, setUser] = useState(null);
     const [authLoading, setAuthLoading] = useState(true); 
     
-    // --- NEW: States and Refs for CSV Export/Import ---
+    // --- CSV Export/Import States ---
     const [isExporting, setIsExporting] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef(null);
+
+    // --- Pagination States ---
+    const [currentPage, setCurrentPage] = useState(0); 
+    const [pageSize, setPageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
 
     useEffect(() => {
         const checkAuth = async () => {
             try {
                 const userData = await fetchFromAPI('/auth/user');
-                console.log("Auth Response from Spring Boot:", userData);
-                
                 if (userData && userData.authenticated) {
                     setUser(userData);
                 } else {
@@ -45,16 +49,21 @@ const FacilitiesPage = () => {
     useEffect(() => {
         const loadResources = async () => {
             try {
-                // Build the query string with our current filter states
+                // Build the query string including pagination parameters
                 const queryParams = new URLSearchParams({
                     searchTerm: searchTerm,
                     type: filterType,
-                    status: filterStatus
+                    status: filterStatus,
+                    page: currentPage,
+                    size: pageSize
                 });
                 
-                // Fetch the explicitly filtered data from the backend
                 const data = await fetchFromAPI(`/resources?${queryParams.toString()}`);
-                setResources(data || []); 
+                
+                // Unpack the Spring Boot Page object
+                setResources(data.content || []); 
+                setTotalPages(data.totalPages || 0);
+                setTotalElements(data.totalElements || 0);
                 setLoading(false);
             } catch (err) {
                 console.error("Failed to load resources", err);
@@ -63,57 +72,39 @@ const FacilitiesPage = () => {
             }
         };
 
-        // Debounce: Wait 500ms after the user stops typing before calling the API
         const delayDebounceFn = setTimeout(() => {
             loadResources();
         }, 500);
 
-        // Cleanup the timer if the user types again before 500ms is up
         return () => clearTimeout(delayDebounceFn);
         
-    }, [searchTerm, filterType, filterStatus]); // <-- Re-run whenever these change
+    }, [searchTerm, filterType, filterStatus, currentPage, pageSize]); // Re-run when page changes
 
     const isAdmin = user?.roles?.includes('ROLE_ADMIN') || user?.email === 'janiduvirunkadev@gmail.com';
 
-    const styles = {
-        container: { padding: '30px', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#f4f7f6', minHeight: '100vh' },
-        header: { color: '#2c3e50', fontSize: '28px', marginBottom: '5px', fontWeight: 'bold' },
-        subHeader: { color: '#7f8c8d', fontSize: '16px', marginBottom: '30px' },
-        card: { backgroundColor: '#ffffff', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #eef2f5' },
-        input: { padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '14px', flex: '1 1 200px', outline: 'none' },
-        buttonPrimary: { padding: '12px 20px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', transition: '0.2s', flex: '1 1 100%' },
-        // --- NEW: Styles for CSV buttons ---
-        buttonExport: { padding: '10px 15px', backgroundColor: '#27ae60', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
-        buttonImport: { padding: '10px 15px', backgroundColor: '#8e44ad', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
-        buttonEdit: { padding: '6px 12px', backgroundColor: '#f1c40f', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', marginRight: '8px', fontWeight: 'bold', fontSize: '12px' },
-        buttonDelete: { padding: '6px 12px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' },
-        table: { width: '100%', borderCollapse: 'collapse', marginTop: '10px' },
-        th: { backgroundColor: '#f8f9fa', color: '#2c3e50', padding: '15px', textAlign: 'left', borderBottom: '2px solid #e1e8ed', fontWeight: '600' },
-        td: { padding: '15px', borderBottom: '1px solid #e1e8ed', color: '#34495e', fontSize: '14px' },
-        badgeActive: { backgroundColor: '#e8f8f5', color: '#27ae60', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', display: 'inline-block' },
-        badgeInactive: { backgroundColor: '#fdedec', color: '#c0392b', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', display: 'inline-block' },
-        errorText: { color: '#e74c3c', fontSize: '12px', marginTop: '4px', display: 'block', fontWeight: 'bold' }
-    };
-
-    if (authLoading || loading) {
-        return (
-            <div style={{...styles.container, textAlign: 'center', paddingTop: '100px'}}>
-                <h2 style={{ color: '#2c3e50' }}>Verifying Credentials & Loading Hub...</h2>
-                <p style={{ color: '#e74c3c', fontWeight: 'bold', marginTop: '20px' }}>
-                    If you are stuck on this screen for more than 5 seconds, your Spring Boot server is likely failing to connect!
-                </p>
-            </div>
-        );
-    }
+    // Reset to page 0 when user types a new search or changes a filter
+    const handleSearchChange = (e) => { setSearchTerm(e.target.value); setCurrentPage(0); };
+    const handleTypeChange = (e) => { setFilterType(e.target.value); setCurrentPage(0); };
+    const handleStatusChange = (e) => { setFilterStatus(e.target.value); setCurrentPage(0); };
 
     const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData({ ...formData, imageBase64: reader.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault(); 
-        setFieldErrors({}); // Clear any previous errors on new submission
+        setFieldErrors({}); 
 
         try {
-            // Determine the URL and Method based on whether we are editing or adding
             const url = editingId ? `http://localhost:8080/api/resources/${editingId}` : 'http://localhost:8080/api/resources';
             const method = editingId ? 'PUT' : 'POST';
 
@@ -121,33 +112,31 @@ const FacilitiesPage = () => {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
-                credentials: 'include' // Ensures OAuth context is passed
+                credentials: 'include' 
             });
 
-            // If the backend rejects the data (e.g., Validation Failed)
             if (!response.ok) {
                 if (response.status === 400) {
                     const errorData = await response.json();
                     if (errorData.errors) {
-                        setFieldErrors(errorData.errors); // Save the specific field errors to state
-                        return; // Stop the function here
+                        setFieldErrors(errorData.errors); 
+                        return; 
                     }
                 }
                 throw new Error('Something went wrong on the server');
             }
 
-            // If successful, parse the saved resource
             const savedResource = await response.json();
 
             if (editingId) {
                 setResources(resources.map(r => r.id === editingId ? savedResource : r));
                 setEditingId(null); 
             } else {
+                setCurrentPage(0);
                 setResources([...resources, savedResource]);
             }
             
-            // Reset form on success
-            setFormData({ name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE' });
+            setFormData({ name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE', imageBase64: '' });
             
         } catch (err) {
             console.error("Save error:", err);
@@ -171,11 +160,9 @@ const FacilitiesPage = () => {
         }
     };
 
-    // --- NEW: Handle CSV Export ---
-   const handleExportCSV = async () => {
+    const handleExportCSV = async () => {
         setIsExporting(true);
         try {
-            // Build the URL with your current filter states
             const exportUrl = new URL('http://localhost:8080/api/resources/export');
             exportUrl.searchParams.append('searchTerm', searchTerm);
             exportUrl.searchParams.append('type', filterType);
@@ -204,7 +191,6 @@ const FacilitiesPage = () => {
         }
     };
 
-    // --- NEW: Handle CSV Import ---
     const handleImportFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -214,191 +200,305 @@ const FacilitiesPage = () => {
         uploadData.append('file', file);
 
         try {
-            // Standard fetch because FormData shouldn't have 'Content-Type: application/json'
             const response = await fetch('http://localhost:8080/api/resources/import', {
                 method: 'POST',
                 body: uploadData,
                 credentials: 'include',
-                // headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } // Uncomment if needed
             });
             
             if (!response.ok) throw new Error('Import failed');
             
             alert("Resources imported successfully!");
-            // Refresh the table data
-            const refreshedData = await fetchFromAPI('/resources');
-            setResources(refreshedData || []);
+            setCurrentPage(0); 
+            const refreshedData = await fetchFromAPI(`/resources?page=0&size=${pageSize}`);
+            setResources(refreshedData.content || []);
+            setTotalPages(refreshedData.totalPages || 0);
+            setTotalElements(refreshedData.totalElements || 0);
         } catch (err) {
             console.error(err);
-            alert("Failed to import data. Make sure your Spring Boot backend has the /import endpoint.");
+            alert("Failed to import data.");
         } finally {
             setIsImporting(false);
-            e.target.value = null; // Reset file input
+            e.target.value = null; 
         }
     };
 
-    // NEW: Just use the resources directly from the backend
     const displayResources = Array.isArray(resources) ? resources : [];
 
+    const handleDownloadQR = async (resource) => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/resources/${resource.id}/qrcode`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            if (!response.ok) throw new Error('Failed to generate QR code');
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${resource.name.replace(/\s+/g, '_')}_QR.png`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+        } catch (err) {
+            console.error(err);
+            alert("Failed to download QR Code.");
+        }
+    };
+
+    if (authLoading || loading) {
+        return (
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6 transition-colors duration-300">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Verifying Credentials & Loading Hub...</h2>
+                <p className="text-red-500 font-medium mt-4">
+                    If you are stuck on this screen for more than 5 seconds, your Spring Boot server is likely failing to connect!
+                </p>
+            </div>
+        );
+    }
+
     return (
-        <div style={styles.container}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <div>
-                    <h2 style={{...styles.header, marginBottom: '5px'}}>Facilities & Assets Catalogue</h2>
-                    <p style={{...styles.subHeader, marginBottom: '0'}}>Smart Campus Operations Hub - Manage Resources</p>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-10 px-4 sm:px-6 lg:px-8 font-sans transition-colors duration-300">
+            <div className="max-w-7xl mx-auto">
+                
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                    <div>
+                        <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">UniHub Facilities & Assets</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Smart Campus Operations Hub - Manage Resources</p>
+                    </div>
+
+                    {isAdmin && (
+                        <div className="flex flex-wrap gap-3">
+                            <button onClick={handleExportCSV} disabled={isExporting} 
+                                className="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-70">
+                                {isExporting ? '⏳ Exporting...' : '📥 Export CSV'}
+                            </button>
+                            
+                            <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleImportFileChange} />
+                            
+                            <button onClick={() => fileInputRef.current.click()} disabled={isImporting} 
+                                className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-70">
+                                {isImporting ? '⏳ Importing...' : '📤 Import CSV'}
+                            </button>
+                        </div>
+                    )}
                 </div>
 
-                {/* --- NEW: Admin Only CSV Actions --- */}
+                {/* Form Section */}
                 {isAdmin && (
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={handleExportCSV} disabled={isExporting} style={styles.buttonExport}>
-                            {isExporting ? '⏳ Exporting...' : '📥 Export CSV'}
-                        </button>
-                        
-                        {/* Hidden file input triggered by the Import button */}
-                        <input 
-                            type="file" 
-                            accept=".csv" 
-                            style={{ display: 'none' }} 
-                            ref={fileInputRef} 
-                            onChange={handleImportFileChange} 
-                        />
-                        <button onClick={() => fileInputRef.current.click()} disabled={isImporting} style={styles.buttonImport}>
-                            {isImporting ? '⏳ Importing...' : '📤 Import CSV'}
-                        </button>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 sm:p-8 mb-8 transition-colors duration-300">
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                            {editingId ? "✏️ Edit Resource" : "➕ Add New Resource"}
+                        </h3>
+                        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            
+                            <div>
+                                <input type="text" name="name" placeholder="Name (e.g., Mini Lab)" value={formData.name} onChange={handleInputChange} 
+                                    className={`block w-full rounded-lg border py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${fieldErrors.name ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-600'}`} />
+                                {fieldErrors.name && <span className="text-red-500 dark:text-red-400 text-xs font-bold mt-1 block">{fieldErrors.name}</span>}
+                            </div>
+
+                            <div>
+                                <select name="type" value={formData.type} onChange={handleInputChange} 
+                                    className={`block w-full rounded-lg border py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${fieldErrors.type ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-600'}`}>
+                                    <option value="LECTURE_HALL">Lecture Hall</option>
+                                    <option value="LAB">Laboratory</option>
+                                    <option value="EQUIPMENT">Equipment</option>
+                                    <option value="MEETING_ROOM">Meeting Room</option>
+                                </select>
+                                {fieldErrors.type && <span className="text-red-500 dark:text-red-400 text-xs font-bold mt-1 block">{fieldErrors.type}</span>}
+                            </div>
+
+                            <div>
+                                <input type="number" name="capacity" placeholder="Capacity (0 for items)" value={formData.capacity} onChange={handleInputChange} 
+                                    className={`block w-full rounded-lg border py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${fieldErrors.capacity ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-600'}`} />
+                                {fieldErrors.capacity && <span className="text-red-500 dark:text-red-400 text-xs font-bold mt-1 block">{fieldErrors.capacity}</span>}
+                            </div>
+
+                            <div>
+                                <input type="text" name="location" placeholder="Location" value={formData.location} onChange={handleInputChange} 
+                                    className={`block w-full rounded-lg border py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${fieldErrors.location ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-600'}`} />
+                                {fieldErrors.location && <span className="text-red-500 dark:text-red-400 text-xs font-bold mt-1 block">{fieldErrors.location}</span>}
+                            </div>
+
+                            <div>
+                                <input type="text" name="availabilityWindows" placeholder="Hours (e.g., 08:00-17:00)" value={formData.availabilityWindows} onChange={handleInputChange} 
+                                    className={`block w-full rounded-lg border py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${fieldErrors.availabilityWindows ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-600'}`} />
+                                {fieldErrors.availabilityWindows && <span className="text-red-500 dark:text-red-400 text-xs font-bold mt-1 block">{fieldErrors.availabilityWindows}</span>}
+                            </div>
+
+                            <div>
+                                <select name="status" value={formData.status} onChange={handleInputChange} 
+                                    className={`block w-full rounded-lg border py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${fieldErrors.status ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-600'}`}>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="OUT_OF_SERVICE">Out of Service</option>
+                                </select>
+                                {fieldErrors.status && <span className="text-red-500 dark:text-red-400 text-xs font-bold mt-1 block">{fieldErrors.status}</span>}
+                            </div>
+
+                            <div className="lg:col-span-3">
+                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Facility Photo (Optional)</label>
+                                <input type="file" accept="image/*" onChange={handleImageUpload} 
+                                    className="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900/30 dark:file:text-blue-400 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50 transition-colors" />
+                                
+                                {formData.imageBase64 && (
+                                    <img src={formData.imageBase64} alt="Preview" className="mt-4 h-24 w-auto rounded-lg object-cover shadow-sm border border-slate-200 dark:border-slate-600" />
+                                )}
+                            </div>
+
+                            <div className="lg:col-span-3 flex gap-4">
+                                <button type="submit" 
+                                    className={`flex-1 py-3 px-4 rounded-lg shadow-sm text-sm font-bold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 ${editingId ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500' : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'}`}>
+                                    {editingId ? "Update Resource" : "Save Resource"}
+                                </button>
+                                
+                                {editingId && (
+                                    <button type="button" onClick={() => {
+                                        setEditingId(null); 
+                                        setFieldErrors({}); 
+                                        setFormData({name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE', imageBase64: ''});
+                                    }} 
+                                    className="flex-1 py-3 px-4 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 focus:ring-slate-500">
+                                        Cancel
+                                    </button>
+                                )}
+                            </div>
+                        </form>
                     </div>
                 )}
-            </div>
 
-            {isAdmin && (
-                <div style={styles.card}>
-                    <h3 style={{ marginTop: 0, color: '#2c3e50', marginBottom: '20px' }}>{editingId ? "✏️ Edit Resource" : "➕ Add New Resource"}</h3>
-                   <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                {/* Data Table Section */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-300">
+                    
+                    {/* Search and Filter Bar */}
+                    <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col md:flex-row gap-4">
+                        <div className="relative flex-1">
+                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500">🔍</span>
+                            <input type="text" placeholder="Search by name or location..." value={searchTerm} onChange={handleSearchChange} 
+                                className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-colors" />
+                        </div>
                         
-                        {/* Name Input */}
-                        <div style={{ flex: '1 1 200px' }}>
-                            <input type="text" name="name" placeholder="Name (e.g., Mini Lab)" value={formData.name} onChange={handleInputChange} 
-                                style={{...styles.input, width: '100%', borderColor: fieldErrors.name ? '#e74c3c' : '#dcdde1', boxSizing: 'border-box'}} />
-                            {fieldErrors.name && <span style={styles.errorText}>{fieldErrors.name}</span>}
-                        </div>
+                        <select value={filterType} onChange={handleTypeChange} 
+                            className="block w-full md:w-48 py-2.5 px-3 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-colors">
+                            <option value="ALL">All Types</option>
+                            <option value="LECTURE_HALL">Lecture Halls</option>
+                            <option value="LAB">Laboratories</option>
+                            <option value="EQUIPMENT">Equipment</option>
+                            <option value="MEETING_ROOM">Meeting Rooms</option>
+                        </select>
 
-                        {/* Type Dropdown */}
-                        <div style={{ flex: '1 1 200px' }}>
-                            <select name="type" value={formData.type} onChange={handleInputChange} 
-                                style={{...styles.input, width: '100%', borderColor: fieldErrors.type ? '#e74c3c' : '#dcdde1', boxSizing: 'border-box'}}>
-                                <option value="LECTURE_HALL">Lecture Hall</option>
-                                <option value="LAB">Laboratory</option>
-                                <option value="EQUIPMENT">Equipment</option>
-                                <option value="MEETING_ROOM">Meeting Room</option>
-                            </select>
-                            {fieldErrors.type && <span style={styles.errorText}>{fieldErrors.type}</span>}
-                        </div>
+                        <select value={filterStatus} onChange={handleStatusChange} 
+                            className="block w-full md:w-48 py-2.5 px-3 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-colors">
+                            <option value="ALL">All Statuses</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="OUT_OF_SERVICE">Out of Service</option>
+                        </select>
+                    </div>
 
-                        {/* Capacity Input */}
-                        <div style={{ flex: '1 1 200px' }}>
-                            <input type="number" name="capacity" placeholder="Capacity (0 for items)" value={formData.capacity} onChange={handleInputChange} 
-                                style={{...styles.input, width: '100%', borderColor: fieldErrors.capacity ? '#e74c3c' : '#dcdde1', boxSizing: 'border-box'}} />
-                            {fieldErrors.capacity && <span style={styles.errorText}>{fieldErrors.capacity}</span>}
-                        </div>
-
-                        {/* Location Input */}
-                        <div style={{ flex: '1 1 200px' }}>
-                            <input type="text" name="location" placeholder="Location" value={formData.location} onChange={handleInputChange} 
-                                style={{...styles.input, width: '100%', borderColor: fieldErrors.location ? '#e74c3c' : '#dcdde1', boxSizing: 'border-box'}} />
-                            {fieldErrors.location && <span style={styles.errorText}>{fieldErrors.location}</span>}
-                        </div>
-
-                        {/* Availability Windows Input */}
-                        <div style={{ flex: '1 1 200px' }}>
-                            <input type="text" name="availabilityWindows" placeholder="Hours (e.g., 08:00-17:00)" value={formData.availabilityWindows} onChange={handleInputChange} 
-                                style={{...styles.input, width: '100%', borderColor: fieldErrors.availabilityWindows ? '#e74c3c' : '#dcdde1', boxSizing: 'border-box'}} />
-                            {fieldErrors.availabilityWindows && <span style={styles.errorText}>{fieldErrors.availabilityWindows}</span>}
-                        </div>
-
-                        {/* Status Dropdown */}
-                        <div style={{ flex: '1 1 200px' }}>
-                            <select name="status" value={formData.status} onChange={handleInputChange} 
-                                style={{...styles.input, width: '100%', borderColor: fieldErrors.status ? '#e74c3c' : '#dcdde1', boxSizing: 'border-box'}}>
-                                <option value="ACTIVE">Active</option>
-                                <option value="OUT_OF_SERVICE">Out of Service</option>
-                            </select>
-                            {fieldErrors.status && <span style={styles.errorText}>{fieldErrors.status}</span>}
-                        </div>
-
-                        {/* Buttons */}
-                        <button type="submit" style={{...styles.buttonPrimary, backgroundColor: editingId ? '#27ae60' : '#3498db'}}>
-                            {editingId ? "Update Resource" : "Save Resource"}
-                        </button>
-                        
-                        {editingId && 
-                            <button type="button" onClick={() => {
-                                setEditingId(null); 
-                                setFieldErrors({}); // Clear errors on cancel
-                                setFormData({name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE'});
-                            }} style={{...styles.buttonPrimary, backgroundColor: '#95a5a6', flex: '1 1 45%'}}>
-                                Cancel
-                            </button>
-                        }
-                    </form>
-                </div>
-            )}
-
-            <div style={styles.card}>
-                <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-                    <input type="text" placeholder="🔍 Search by name or location..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...styles.input, flex: '2'}} />
-                    <select value={filterType} onChange={(e) => setFilterType(e.target.value)} style={styles.input}>
-                        <option value="ALL">All Types</option>
-                        <option value="LECTURE_HALL">Lecture Halls</option>
-                        <option value="LAB">Laboratories</option>
-                        <option value="EQUIPMENT">Equipment</option>
-                        <option value="MEETING_ROOM">Meeting Rooms</option>
-                    </select>
-                    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={styles.input}>
-                        <option value="ALL">All Statuses</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="OUT_OF_SERVICE">Out of Service</option>
-                    </select>
-                </div>
-
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={styles.table}>
-                        <thead>
-                            <tr>
-                                <th style={styles.th}>Name</th>
-                                <th style={styles.th}>Type</th>
-                                <th style={styles.th}>Capacity</th>
-                                <th style={styles.th}>Location</th>
-                                <th style={styles.th}>Availability</th>
-                                <th style={styles.th}>Status</th>
-                                {isAdmin && <th style={styles.th}>Actions</th>}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {displayResources.map((r) => (
-                                <tr key={r.id} style={{ transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                    <td style={{...styles.td, fontWeight: 'bold'}}>{r.name}</td>
-                                    <td style={styles.td}>{r.type.replace('_', ' ')}</td>
-                                    <td style={styles.td}>{r.capacity === 0 ? '-' : r.capacity}</td>
-                                    <td style={styles.td}>{r.location}</td>
-                                    <td style={styles.td}>{r.availabilityWindows}</td>
-                                    <td style={styles.td}>
-                                        <span style={r.status === 'ACTIVE' ? styles.badgeActive : styles.badgeInactive}>
-                                            {r.status === 'ACTIVE' ? '🟢 Active' : '🔴 Maintenance'}
-                                        </span>
-                                    </td>
-                                    {isAdmin && (
-                                    <td style={styles.td}>
-                                        <button onClick={() => handleEditClick(r)} style={styles.buttonEdit}>Edit</button>
-                                        <button onClick={() => handleDelete(r.id)} style={styles.buttonDelete}>Delete</button>
-                                    </td>
-                                    )}
+                    {/* Table */}
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                            <thead className="bg-slate-50 dark:bg-slate-900/50">
+                                <tr>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Facility</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Capacity</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Location</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Availability</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                                    {isAdmin && <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>}
                                 </tr>
-                            ))}
-                            {displayResources.length === 0 && (
-                                <tr><td colSpan={isAdmin ? "7" : "6"} style={{...styles.td, textAlign: 'center', padding: '30px', color: '#7f8c8d'}}>No resources match your search criteria.</td></tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                                {displayResources.map((r) => (
+                                    <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="flex-shrink-0 h-10 w-10">
+                                                    {r.imageBase64 ? (
+                                                        <img className="h-10 w-10 rounded-full object-cover border border-slate-200 dark:border-slate-600" src={r.imageBase64} alt="" />
+                                                    ) : (
+                                                        <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-lg border border-slate-200 dark:border-slate-600">🏢</div>
+                                                    )}
+                                                </div>
+                                                <div className="ml-4">
+                                                    <div className="text-sm font-bold text-slate-900 dark:text-white">{r.name}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{r.type.replace('_', ' ')}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{r.capacity === 0 ? '-' : r.capacity}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{r.location}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{r.availabilityWindows}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${r.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400'}`}>
+                                                {r.status === 'ACTIVE' ? '🟢 Active' : '🔴 Maintenance'}
+                                            </span>
+                                        </td>
+                                        {isAdmin && (
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button onClick={() => handleDownloadQR(r)} className="text-purple-600 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-300 mx-1 bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-md transition-colors">QR</button>
+                                                <button onClick={() => handleEditClick(r)} className="text-amber-600 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 mx-1 bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-md transition-colors">Edit</button>
+                                                <button onClick={() => handleDelete(r.id)} className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 ml-1 bg-red-50 dark:bg-red-900/30 px-3 py-1 rounded-md transition-colors">Delete</button>
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))}
+                                {displayResources.length === 0 && (
+                                    <tr>
+                                        <td colSpan={isAdmin ? "7" : "6"} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400 text-sm">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <span className="text-4xl mb-3 opacity-80">📭</span>
+                                                <p>No resources match your search criteria.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Pagination Footer */}
+                    <div className="bg-white dark:bg-slate-800 px-4 py-3 border-t border-slate-200 dark:border-slate-700 sm:px-6 flex items-center justify-between rounded-b-2xl transition-colors duration-300">
+                        <div className="hidden sm:block">
+                            <p className="text-sm text-slate-700 dark:text-slate-300">
+                                Showing Page <span className="font-semibold">{Math.min(currentPage + 1, totalPages === 0 ? 1 : totalPages)}</span> of <span className="font-semibold">{Math.max(1, totalPages)}</span>
+                                <span className="text-slate-500 dark:text-slate-400 ml-2">({totalElements} Total Facilities)</span>
+                            </p>
+                        </div>
+                        <div className="flex-1 flex justify-between sm:justify-end gap-3">
+                            <select 
+                                value={pageSize} 
+                                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(0); }}
+                                className="relative inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 text-sm font-medium rounded-md text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                            >
+                                <option value={5}>5 per page</option>
+                                <option value={10}>10 per page</option>
+                                <option value={20}>20 per page</option>
+                            </select>
+
+                            <button 
+                                onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                disabled={currentPage === 0}
+                                className={`relative inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 text-sm font-medium rounded-md transition-colors
+                                    ${currentPage === 0 ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border-transparent' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600'}`}
+                            >
+                                Previous
+                            </button>
+                            <button 
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                                disabled={currentPage >= totalPages - 1 || totalPages === 0}
+                                className={`relative inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 text-sm font-medium rounded-md transition-colors
+                                    ${currentPage >= totalPages - 1 || totalPages === 0 ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border-transparent' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600'}`}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
