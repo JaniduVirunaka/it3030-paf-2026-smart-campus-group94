@@ -1,5 +1,5 @@
 // Base configuration for all backend requests
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = '/api';
 
 export const fetchFromAPI = async (endpoint, options = {}) => {
     try {

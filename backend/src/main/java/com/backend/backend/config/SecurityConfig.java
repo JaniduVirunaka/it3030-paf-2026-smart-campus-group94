@@ -41,6 +41,8 @@ public class SecurityConfig {
             // CRITICAL: Tells Spring to save standard login sessions using Cookies
             .securityContext(context -> context.securityContextRepository(securityContextRepository()))
             .authorizeHttpRequests(auth -> auth
+                // Allow anyone (even logged out phones) to read resource data
+                .requestMatchers(HttpMethod.GET, "/api/resources/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll() // Allow access to login, register, and user check
                 .requestMatchers(HttpMethod.GET, "/api/resources/**").authenticated()
                 .requestMatchers("/api/resources/**").hasRole("ADMIN")
