@@ -91,11 +91,10 @@ public class ResourceController {
             if (resourceOpt.isPresent()) {
                 Resource resource = resourceOpt.get();
                 
-                // The text that will be shown when someone scans the code
-                String qrText = "Smart Campus Hub\n" +
-                                "Facility: " + resource.getName() + "\n" +
-                                "Location: " + resource.getLocation() + "\n" +
-                                "Type: " + resource.getType();
+                String publicUrl = "https://ensure-alkalize-petal.ngrok-free.dev"; 
+                
+                // 2. We route it to a specific "mobile view" page
+                String qrText = publicUrl + "/resource/view/" + resource.getId();
 
                 // Generate a 250x250 pixel QR code
                 byte[] image = QRCodeGenerator.getQRCodeImage(qrText, 250, 250);
