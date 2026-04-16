@@ -25,63 +25,75 @@ const DashboardPage = () => {
 
     const isAdmin = user?.roles?.includes('ROLE_ADMIN');
 
-    const styles = {
-        container: { padding: '40px 20px', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#f4f7f6', minHeight: '100vh' },
-        hero: { backgroundColor: '#3498db', color: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginBottom: '30px' },
-        heroTitle: { margin: '0 0 10px 0', fontSize: '32px' },
-        heroSub: { margin: 0, fontSize: '18px', opacity: 0.9 },
-        grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' },
-        card: { backgroundColor: '#ffffff', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #eef2f5', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer' },
-        cardIcon: { fontSize: '40px', marginBottom: '15px' },
-        cardTitle: { margin: '0 0 10px 0', color: '#2c3e50', fontSize: '20px' },
-        cardText: { margin: 0, color: '#7f8c8d', fontSize: '14px', marginBottom: '20px' },
-        buttonPrimary: { padding: '10px 20px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' },
-        buttonAdmin: { padding: '10px 20px', backgroundColor: '#27ae60', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }
-    };
-
     if (loading) {
-        return <div style={{...styles.container, textAlign: 'center', paddingTop: '100px'}}><h2>Loading Dashboard...</h2></div>;
+        return (
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center transition-colors duration-300">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white">Loading Dashboard...</h2>
+            </div>
+        );
     }
 
     return (
-        <div style={styles.container}>
-            {/* Hero Section */}
-            <div style={styles.hero}>
-                <h1 style={styles.heroTitle}>Welcome back, {user?.name || 'User'}! 👋</h1>
-                <p style={styles.heroSub}>Smart Campus Operations Hub</p>
-                {isAdmin && <span style={{display: 'inline-block', marginTop: '15px', backgroundColor: '#f1c40f', color: '#2c3e50', padding: '5px 10px', borderRadius: '5px', fontWeight: 'bold', fontSize: '12px'}}>ADMINISTRATOR</span>}
-            </div>
-
-            {/* Quick Actions Grid */}
-            <h2 style={{ color: '#2c3e50', marginBottom: '20px' }}>Quick Actions</h2>
-            <div style={styles.grid}>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-300 font-sans">
+            <div className="max-w-6xl mx-auto">
                 
-                {/* Module A Link (Your Module) */}
-                <div style={styles.card} onClick={() => window.location.href = '/facilities'} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-                    <div style={styles.cardIcon}>🏢</div>
-                    <h3 style={styles.cardTitle}>Facilities Catalogue</h3>
-                    <p style={styles.cardText}>Browse and manage campus lecture halls, labs, and equipment.</p>
-                    <button style={isAdmin ? styles.buttonAdmin : styles.buttonPrimary}>
-                        {isAdmin ? 'Manage Resources' : 'View Catalogue'}
-                    </button>
+                {/* Hero Section */}
+                <div className="bg-blue-600 dark:bg-blue-700 text-white p-8 md:p-10 rounded-2xl shadow-lg mb-10 transition-colors duration-300">
+                    <h1 className="text-3xl md:text-4xl font-extrabold mb-2">Welcome back, {user?.name || 'User'}! 👋</h1>
+                    <p className="text-blue-100 text-lg mb-4">Smart Campus Operations Hub</p>
+                    {isAdmin && (
+                        <span className="inline-block bg-amber-400 text-amber-900 px-3 py-1 rounded-md font-bold text-xs tracking-wider uppercase">
+                            Administrator
+                        </span>
+                    )}
                 </div>
 
-                {/* Module B Link */}
-                <div style={styles.card} onClick={() => alert("Module B: Bookings coming soon!")} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-                    <div style={styles.cardIcon}>📅</div>
-                    <h3 style={styles.cardTitle}>My Bookings</h3>
-                    <p style={styles.cardText}>Request a new room booking or check the status of your requests.</p>
-                    <button style={styles.buttonPrimary}>Manage Bookings</button>
-                </div>
+                {/* Quick Actions Grid */}
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Quick Actions</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    
+                    {/* Module A */}
+                    <div 
+                        onClick={() => window.location.href = '/facilities'} 
+                        className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-center hover:-translate-y-1 hover:shadow-md transition-all cursor-pointer flex flex-col items-center"
+                    >
+                        <div className="text-5xl mb-4">🏢</div>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Facilities Catalogue</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 flex-grow">Browse and manage campus lecture halls, labs, and equipment.</p>
+                        <button className={`w-full py-3 rounded-xl font-bold text-white transition-colors ${isAdmin ? 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500' : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500'}`}>
+                            {isAdmin ? 'Manage Resources' : 'View Catalogue'}
+                        </button>
+                    </div>
 
-                {/* Module C Link */}
-                <div style={styles.card} onClick={() => alert("Module C: Ticketing coming soon!")} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-                    <div style={styles.cardIcon}>🛠️</div>
-                    <h3 style={styles.cardTitle}>Incident Reports</h3>
-                    <p style={styles.cardText}>Report a broken projector, AC issue, or facility maintenance request.</p>
-                    <button style={styles.buttonPrimary}>Submit Ticket</button>
-                </div>
+                    {/* Module B */}
+                    <div 
+                        onClick={() => alert("Module B: Bookings coming soon!")} 
+                        className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-center hover:-translate-y-1 hover:shadow-md transition-all cursor-pointer flex flex-col items-center"
+                    >
+                        <div className="text-5xl mb-4">📅</div>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">My Bookings</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 flex-grow">Request a new room booking or check the status of your requests.</p>
+                        <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 text-white rounded-xl font-bold transition-colors">
+                            Manage Bookings
+                        </button>
+                    </div>
 
+                    {/* Module C */}
+                    <div 
+                        onClick={() => alert("Module C: Ticketing coming soon!")} 
+                        className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-center hover:-translate-y-1 hover:shadow-md transition-all cursor-pointer flex flex-col items-center"
+                    >
+                        <div className="text-5xl mb-4">🛠️</div>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Incident Reports</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 flex-grow">Report a broken projector, AC issue, or facility maintenance request.</p>
+                        <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 text-white rounded-xl font-bold transition-colors">
+                            Submit Ticket
+                        </button>
+                    </div>
+
+                </div>
             </div>
         </div>
     );

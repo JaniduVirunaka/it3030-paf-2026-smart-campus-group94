@@ -20,6 +20,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageImpl;
+
 import java.util.Arrays;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -64,8 +67,8 @@ public class ResourceControllerTest {
         r1.setId("1");
         
         // Tell our mock service what to return when the controller asks for data
-        when(resourceService.searchAndFilterResources(anyString(), anyString(), anyString()))
-                .thenReturn(Arrays.asList(r1));
+       when(resourceService.searchAndFilterResources(anyString(), anyString(), anyString(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(Arrays.asList(r1)));
 
         // 2 & 3. Act & Assert: Simulate a GET request and check the results
         mockMvc.perform(get("/api/resources")

@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom'; // Assuming you use react-router
+import { useParams } from 'react-router-dom';
 import { fetchFromAPI } from '../services/api'; 
 
 const ResourceMobileView = () => {
-    // Grabs the ID from the URL (e.g., /resource/view/123)
     const { id } = useParams(); 
     const [resource, setResource] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -11,7 +10,6 @@ const ResourceMobileView = () => {
     useEffect(() => {
         const loadResource = async () => {
             try {
-                // Fetch just this specific resource from your Java backend
                 const data = await fetchFromAPI(`/resources/${id}`);
                 setResource(data);
             } catch (err) {
@@ -23,61 +21,58 @@ const ResourceMobileView = () => {
         loadResource();
     }, [id]);
 
-    if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}>Loading Facility Data...</div>;
-    if (!resource) return <div style={{ textAlign: 'center', padding: '50px' }}>Facility Not Found.</div>;
+    if (loading) return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-slate-800 dark:text-white">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+            Loading Facility Data...
+        </div>
+    );
+
+    if (!resource) return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-800 dark:text-white font-bold text-xl">
+            Facility Not Found.
+        </div>
+    );
 
     return (
-        <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
-            <div style={{ backgroundColor: '#fff', borderRadius: '15px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 sm:p-6 font-sans transition-colors duration-300">
+            <div className="max-w-lg mx-auto bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-6 text-center transition-colors duration-300">
                 
-                {/* NEW: Display the Image if it exists */}
                 {resource.imageBase64 ? (
-                    <img src={resource.imageBase64} alt={resource.name} style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '10px', marginBottom: '20px' }} />
+                    <img src={resource.imageBase64} alt={resource.name} className="w-full h-52 object-cover rounded-xl mb-6 shadow-sm" />
                 ) : (
-                    // Fallback placeholder if no image was uploaded
-                    <div style={{ width: '100%', height: '150px', backgroundColor: '#ecf0f1', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#95a5a6' }}>
+                    <div className="w-full h-40 bg-slate-100 dark:bg-slate-700 rounded-xl mb-6 flex items-center justify-center text-slate-400 dark:text-slate-500 text-lg border border-slate-200 dark:border-slate-600">
                         📸 No Image Available
                     </div>
                 )}
                 
-                {/* Big, friendly mobile header */}
-                <h1 style={{ color: '#2c3e50', marginBottom: '5px' }}>{resource.name}</h1>
-                <p style={{ color: '#7f8c8d', fontSize: '18px', marginTop: '0' }}>{resource.type.replace('_', ' ')}</p>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{resource.name}</h1>
+                <p className="text-lg text-slate-500 dark:text-slate-400 mb-6">{resource.type.replace('_', ' ')}</p>
                 
-                <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '20px 0' }} />
+                <hr className="border-t border-slate-200 dark:border-slate-700 mb-6" />
 
-                {/* Mobile-friendly data grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', textAlign: 'left' }}>
-                    <div>
-                        <strong style={{ color: '#bdc3c7', fontSize: '12px', display: 'block' }}>LOCATION</strong>
-                        <span style={{ fontSize: '16px', color: '#34495e', fontWeight: 'bold' }}>{resource.location}</span>
+                <div className="grid grid-cols-2 gap-4 text-left">
+                    <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                        <strong className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Location</strong>
+                        <span className="text-base font-bold text-slate-800 dark:text-slate-100">{resource.location}</span>
                     </div>
-                    <div>
-                        <strong style={{ color: '#bdc3c7', fontSize: '12px', display: 'block' }}>CAPACITY</strong>
-                        <span style={{ fontSize: '16px', color: '#34495e', fontWeight: 'bold' }}>{resource.capacity > 0 ? `${resource.capacity} People` : 'N/A'}</span>
+                    <div className="bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                        <strong className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Capacity</strong>
+                        <span className="text-base font-bold text-slate-800 dark:text-slate-100">{resource.capacity > 0 ? `${resource.capacity} People` : 'N/A'}</span>
                     </div>
-                    <div style={{ gridColumn: 'span 2' }}>
-                        <strong style={{ color: '#bdc3c7', fontSize: '12px', display: 'block' }}>AVAILABLE HOURS</strong>
-                        <span style={{ fontSize: '16px', color: '#34495e', fontWeight: 'bold' }}>{resource.availabilityWindows}</span>
+                    <div className="col-span-2 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                        <strong className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Available Hours</strong>
+                        <span className="text-base font-bold text-slate-800 dark:text-slate-100">{resource.availabilityWindows}</span>
                     </div>
                 </div>
 
-                <div style={{ marginTop: '30px' }}>
-                    <span style={{ 
-                        backgroundColor: resource.status === 'ACTIVE' ? '#27ae60' : '#c0392b', 
-                        color: 'white', padding: '10px 20px', borderRadius: '25px', 
-                        fontWeight: 'bold', fontSize: '16px', display: 'inline-block' 
-                    }}>
+                <div className="mt-8 mb-6">
+                    <span className={`px-5 py-2 rounded-full font-bold text-sm shadow-sm ${resource.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400'}`}>
                         {resource.status === 'ACTIVE' ? '🟢 Ready for Use' : '🔴 Out of Service'}
                     </span>
                 </div>
 
-                {/* A cool fake "Action" button for extra marks */}
-                <button style={{
-                    width: '100%', padding: '15px', backgroundColor: '#3498db', color: 'white', 
-                    border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '16px', 
-                    marginTop: '25px', cursor: 'pointer'
-                }}>
+                <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-xl font-bold text-lg shadow-sm transition-colors">
                     Report an Issue
                 </button>
             </div>

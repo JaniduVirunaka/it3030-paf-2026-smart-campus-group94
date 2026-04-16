@@ -4,6 +4,12 @@ import com.backend.backend.models.Resource;
 import com.backend.backend.repositories.ResourceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.domain.PageImpl;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +19,9 @@ public class ResourceService {
 
     @Autowired
     private ResourceRepository resourceRepository;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     // 1. CREATE (Will be used for POST)
     // Saves a brand new resource to the database
@@ -69,24 +78,42 @@ public class ResourceService {
         return false;
     }
 
-    // NEW: Server-side search and filter logic
-    public List<Resource> searchAndFilterResources(String searchTerm, String type, String status) {
-        // Fetch your active resources from the database
-        List<Resource> allActiveResources = resourceRepository.findAll(); // Or findByStatusNot("DELETED")
+    // NEW: True Server-Side Search, Filter, and Pagination
+    public Page<Resource> searchAndFilterResources(String searchTerm, String type, String status, Pageable pageable) {
+        Query query = new Query();
 
-        // Use Java Streams to filter the data before sending it to the frontend
-        return allActiveResources.stream().filter(r -> {
-            boolean matchesSearch = searchTerm.isEmpty() || 
-                (r.getName() != null && r.getName().toLowerCase().contains(searchTerm.toLowerCase())) ||
-                (r.getLocation() != null && r.getLocation().toLowerCase().contains(searchTerm.toLowerCase()));
-                
-            boolean matchesType = type.equals("ALL") || 
-                (r.getType() != null && r.getType().equalsIgnoreCase(type));
-                
-            boolean matchesStatus = status.equals("ALL") || 
-                (r.getStatus() != null && r.getStatus().equalsIgnoreCase(status));
+        // 1. Apply Search Term (Checks if Name OR Location contains the text, ignoring case)
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            Criteria searchCriteria = new Criteria().orOperator(
+                Criteria.where("name").regex(searchTerm, "i"),
+                Criteria.where("location").regex(searchTerm, "i")
+            );
+            query.addCriteria(searchCriteria);
+        }
 
-            return matchesSearch && matchesType && matchesStatus;
-        }).toList();
+        // 2. Apply Type Filter
+        if (type != null && !type.equals("ALL")) {
+            query.addCriteria(Criteria.where("type").is(type));
+        }
+
+        // 3. Apply Status Filter
+        if (status != null && !status.equals("ALL")) {
+            query.addCriteria(Criteria.where("status").is(status));
+        } else {
+            // Optional: Even if they select "ALL", we probably don't want to show ARCHIVED in the main table
+            query.addCriteria(Criteria.where("status").ne("ARCHIVED")); 
+        }
+
+        // 4. Count the total matching records BEFORE we slice them into pages
+        long totalCount = mongoTemplate.count(query, Resource.class);
+
+        // 5. Apply the Pagination (e.g., "Skip the first 20, grab the next 10")
+        query.with(pageable);
+
+        // 6. Fetch just that tiny slice of data from the database
+        List<Resource> paginatedResources = mongoTemplate.find(query, Resource.class);
+
+        // 7. Package it up into a beautiful Page object for React
+        return new PageImpl<>(paginatedResources, pageable, totalCount);
     }
 }
