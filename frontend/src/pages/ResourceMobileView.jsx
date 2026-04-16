@@ -30,6 +30,16 @@ const ResourceMobileView = () => {
         <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
             <div style={{ backgroundColor: '#fff', borderRadius: '15px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', textAlign: 'center' }}>
                 
+                {/* NEW: Display the Image if it exists */}
+                {resource.imageBase64 ? (
+                    <img src={resource.imageBase64} alt={resource.name} style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '10px', marginBottom: '20px' }} />
+                ) : (
+                    // Fallback placeholder if no image was uploaded
+                    <div style={{ width: '100%', height: '150px', backgroundColor: '#ecf0f1', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#95a5a6' }}>
+                        📸 No Image Available
+                    </div>
+                )}
+                
                 {/* Big, friendly mobile header */}
                 <h1 style={{ color: '#2c3e50', marginBottom: '5px' }}>{resource.name}</h1>
                 <p style={{ color: '#7f8c8d', fontSize: '18px', marginTop: '0' }}>{resource.type.replace('_', ' ')}</p>

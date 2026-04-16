@@ -9,7 +9,7 @@ const FacilitiesPage = () => {
     const [filterStatus, setFilterStatus] = useState('ALL');
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
-        name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE'
+        name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE', imageBase64: ''
     });
     const [fieldErrors, setFieldErrors] = useState({});
 
@@ -107,6 +107,19 @@ const FacilitiesPage = () => {
     }
 
     const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    // --- NEW: Convert Image to Base64 ---
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                // This saves the converted image string into your form data
+                setFormData({ ...formData, imageBase64: reader.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
   const handleSubmit = async (e) => {
         e.preventDefault(); 
@@ -352,6 +365,17 @@ const FacilitiesPage = () => {
                             {fieldErrors.status && <span style={styles.errorText}>{fieldErrors.status}</span>}
                         </div>
 
+                        {/* Image Upload Input */}
+                        <div style={{ flex: '1 1 100%', marginBottom: '10px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', color: '#7f8c8d', marginBottom: '5px' }}>Facility Photo (Optional)</label>
+                            <input type="file" accept="image/*" onChange={handleImageUpload} style={{...styles.input, width: '100%', boxSizing: 'border-box'}} />
+                            
+                            {/* Show a tiny preview of the image if they uploaded one */}
+                            {formData.imageBase64 && (
+                                <img src={formData.imageBase64} alt="Preview" style={{ marginTop: '10px', height: '80px', borderRadius: '5px', objectFit: 'cover' }} />
+                            )}
+                        </div>
+
                         {/* Buttons */}
                         <button type="submit" style={{...styles.buttonPrimary, backgroundColor: editingId ? '#27ae60' : '#3498db'}}>
                             {editingId ? "Update Resource" : "Save Resource"}
@@ -361,7 +385,7 @@ const FacilitiesPage = () => {
                             <button type="button" onClick={() => {
                                 setEditingId(null); 
                                 setFieldErrors({}); // Clear errors on cancel
-                                setFormData({name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE'});
+                                setFormData({name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE', imageBase64: ''});
                             }} style={{...styles.buttonPrimary, backgroundColor: '#95a5a6', flex: '1 1 45%'}}>
                                 Cancel
                             </button>
@@ -403,7 +427,21 @@ const FacilitiesPage = () => {
                         <tbody>
                             {displayResources.map((r) => (
                                 <tr key={r.id} style={{ transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                    <td style={{...styles.td, fontWeight: 'bold'}}>{r.name}</td>
+                                    {/* Updated Name Column with Image Thumbnail */}
+                                    <td style={{...styles.td, display: 'flex', alignItems: 'center', gap: '10px'}}>
+                                        {r.imageBase64 ? (
+                                            <img 
+                                                src={r.imageBase64} 
+                                                alt="thumb" 
+                                                style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} 
+                                            />
+                                        ) : (
+                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#ecf0f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>
+                                                🏢
+                                            </div>
+                                        )}
+                                        <span style={{ fontWeight: 'bold', color: '#2c3e50' }}>{r.name}</span>
+                                    </td>
                                     <td style={styles.td}>{r.type.replace('_', ' ')}</td>
                                     <td style={styles.td}>{r.capacity === 0 ? '-' : r.capacity}</td>
                                     <td style={styles.td}>{r.location}</td>

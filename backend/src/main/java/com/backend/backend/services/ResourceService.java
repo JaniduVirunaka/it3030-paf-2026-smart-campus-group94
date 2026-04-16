@@ -50,7 +50,7 @@ public class ResourceService {
             updatedResource.setLocation(resourceDetails.getLocation());
             updatedResource.setAvailabilityWindows(resourceDetails.getAvailabilityWindows());
             updatedResource.setStatus(resourceDetails.getStatus());
-            
+            updatedResource.setImageBase64(resourceDetails.getImageBase64());
             return resourceRepository.save(updatedResource);
         }
         return null; // In the next step, we will make the Controller handle this 'null' gracefully
