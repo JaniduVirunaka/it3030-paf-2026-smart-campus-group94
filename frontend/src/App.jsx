@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import FacilitiesPage from './pages/FacilitiesPage';
 import DashboardPage from './pages/DashboardPage';
 import ResourceMobileView from './pages/ResourceMobileView';
+import BookingsPage from './pages/BookingsPage';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -25,6 +26,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/facilities" element={<FacilitiesPage />} />
+            <Route path="/bookings" element={<BookingsPage />} />
           </Route>
         </Route>
 
