@@ -1,84 +1,60 @@
 import { useState, useEffect, useRef } from 'react';
-import { fetchFromAPI } from '../services/api'; 
+import { useOutletContext } from 'react-router-dom';
+import { fetchFromAPI } from '../services/api';
 
 const FacilitiesPage = () => {
+    const { user } = useOutletContext();
+
     const [resources, setResources] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('ALL');
     const [filterStatus, setFilterStatus] = useState('ALL');
+    const [minCapacity, setMinCapacity] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
         name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE', imageBase64: ''
     });
     const [fieldErrors, setFieldErrors] = useState({});
 
-    const [user, setUser] = useState(null);
-    const [authLoading, setAuthLoading] = useState(true); 
-    
     // --- CSV Export/Import States ---
     const [isExporting, setIsExporting] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef(null);
 
     // --- Pagination States ---
-    const [currentPage, setCurrentPage] = useState(0); 
+    const [currentPage, setCurrentPage] = useState(0);
     const [pageSize, setPageSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
 
     useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const userData = await fetchFromAPI('/auth/user');
-                if (userData && userData.authenticated) {
-                    setUser(userData);
-                } else {
-                    window.location.href = '/'; 
-                }
-            } catch (err) {
-                console.error("Auth check failed", err);
-                window.location.href = '/';
-            } finally {
-                setAuthLoading(false); 
-            }
-        };
-        checkAuth();
-    }, []);
-
-    useEffect(() => {
         const loadResources = async () => {
             try {
-                // Build the query string including pagination parameters
                 const queryParams = new URLSearchParams({
-                    searchTerm: searchTerm,
+                    searchTerm,
                     type: filterType,
                     status: filterStatus,
+                    minCapacity: minCapacity || 0,
                     page: currentPage,
                     size: pageSize
                 });
-                
+
                 const data = await fetchFromAPI(`/resources?${queryParams.toString()}`);
-                
-                // Unpack the Spring Boot Page object
-                setResources(data.content || []); 
+                setResources(data.content || []);
                 setTotalPages(data.totalPages || 0);
                 setTotalElements(data.totalElements || 0);
                 setLoading(false);
             } catch (err) {
                 console.error("Failed to load resources", err);
-                setResources([]); 
+                setResources([]);
                 setLoading(false);
             }
         };
 
-        const delayDebounceFn = setTimeout(() => {
-            loadResources();
-        }, 500);
-
+        const delayDebounceFn = setTimeout(loadResources, 500);
         return () => clearTimeout(delayDebounceFn);
-        
-    }, [searchTerm, filterType, filterStatus, currentPage, pageSize]); // Re-run when page changes
+    }, [searchTerm, filterType, filterStatus, minCapacity, currentPage, pageSize]);
 
     const isAdmin = user?.roles?.includes('ROLE_ADMIN');
 
@@ -86,6 +62,7 @@ const FacilitiesPage = () => {
     const handleSearchChange = (e) => { setSearchTerm(e.target.value); setCurrentPage(0); };
     const handleTypeChange = (e) => { setFilterType(e.target.value); setCurrentPage(0); };
     const handleStatusChange = (e) => { setFilterStatus(e.target.value); setCurrentPage(0); };
+    const handleMinCapacityChange = (e) => { setMinCapacity(e.target.value); setCurrentPage(0); };
 
     const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -244,14 +221,11 @@ const FacilitiesPage = () => {
         }
     };
 
-    if (authLoading || loading) {
+    if (loading) {
         return (
             <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6 transition-colors duration-300">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Verifying Credentials & Loading Hub...</h2>
-                <p className="text-red-500 font-medium mt-4">
-                    If you are stuck on this screen for more than 5 seconds, your Spring Boot server is likely failing to connect!
-                </p>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Loading Hub...</h2>
             </div>
         );
     }
@@ -387,12 +361,21 @@ const FacilitiesPage = () => {
                             <option value="MEETING_ROOM">Meeting Rooms</option>
                         </select>
 
-                        <select value={filterStatus} onChange={handleStatusChange} 
+                        <select value={filterStatus} onChange={handleStatusChange}
                             className="block w-full md:w-48 py-2.5 px-3 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-colors">
                             <option value="ALL">All Statuses</option>
                             <option value="ACTIVE">Active</option>
                             <option value="OUT_OF_SERVICE">Out of Service</option>
                         </select>
+
+                        <input
+                            type="number"
+                            min="0"
+                            placeholder="Min Capacity"
+                            value={minCapacity}
+                            onChange={handleMinCapacityChange}
+                            className="block w-full md:w-36 py-2.5 px-3 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-colors"
+                        />
                     </div>
 
                     {/* Table */}

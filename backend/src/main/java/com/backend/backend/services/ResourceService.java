@@ -72,11 +72,11 @@ public class ResourceService {
         return false;
     }
 
-    // NEW: True Server-Side Search, Filter, and Pagination
-    public Page<Resource> searchAndFilterResources(String searchTerm, String type, String status, Pageable pageable) {
+    // Server-Side Search, Filter, and Pagination
+    public Page<Resource> searchAndFilterResources(String searchTerm, String type, String status, Integer minCapacity, Pageable pageable) {
         Query query = new Query();
 
-        // 1. Apply Search Term (Checks if Name OR Location contains the text, ignoring case)
+        // 1. Apply Search Term (checks Name OR Location, case-insensitive)
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
             Criteria searchCriteria = new Criteria().orOperator(
                 Criteria.where("name").regex(searchTerm, "i"),
@@ -90,24 +90,27 @@ public class ResourceService {
             query.addCriteria(Criteria.where("type").is(type));
         }
 
-        // 3. Apply Status Filter
+        // 3. Apply Status Filter (hide ARCHIVED unless explicitly requested)
         if (status != null && !status.equals("ALL")) {
             query.addCriteria(Criteria.where("status").is(status));
         } else {
-            // Optional: Even if they select "ALL", we probably don't want to show ARCHIVED in the main table
-            query.addCriteria(Criteria.where("status").ne("ARCHIVED")); 
+            query.addCriteria(Criteria.where("status").ne("ARCHIVED"));
         }
 
-        // 4. Count the total matching records BEFORE we slice them into pages
+        // 4. Apply Minimum Capacity Filter
+        if (minCapacity != null && minCapacity > 0) {
+            query.addCriteria(Criteria.where("capacity").gte(minCapacity));
+        }
+
+        // 5. Count total matching records before slicing into pages
         long totalCount = mongoTemplate.count(query, Resource.class);
 
-        // 5. Apply the Pagination (e.g., "Skip the first 20, grab the next 10")
+        // 6. Apply pagination
         query.with(pageable);
 
-        // 6. Fetch just that tiny slice of data from the database
+        // 7. Fetch the page slice
         List<Resource> paginatedResources = mongoTemplate.find(query, Resource.class);
 
-        // 7. Package it up into a beautiful Page object for React
         return new PageImpl<>(paginatedResources, pageable, totalCount);
     }
 }

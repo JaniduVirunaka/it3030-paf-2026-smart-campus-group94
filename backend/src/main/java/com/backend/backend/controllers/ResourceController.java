@@ -42,23 +42,19 @@ public class ResourceController {
         return new ResponseEntity<>(newResource, HttpStatus.CREATED);
     }
 
-    // 2. UPGRADED GET - Retrieve all active resources (Hides archived)
-   // UPGRADED GET - Server-Side Search and Filtering
-  @GetMapping
+    // 2. GET - Retrieve resources with search, filter, and pagination
+    @GetMapping
     public ResponseEntity<Page<Resource>> getAllResources(
             @RequestParam(required = false, defaultValue = "") String searchTerm,
             @RequestParam(required = false, defaultValue = "ALL") String type,
             @RequestParam(required = false, defaultValue = "ALL") String status,
-            @RequestParam(defaultValue = "0") int page, // NEW: Which page they want (starts at 0)
-            @RequestParam(defaultValue = "10") int size // NEW: How many items per page
+            @RequestParam(required = false, defaultValue = "0") int minCapacity,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         try {
-            // Bundle the page and size into a Pageable object
             Pageable pageable = PageRequest.of(page, size);
-            
-            // Pass the search terms AND the pageable object to the service
-            Page<Resource> resources = resourceService.searchAndFilterResources(searchTerm, type, status, pageable);
-            
+            Page<Resource> resources = resourceService.searchAndFilterResources(searchTerm, type, status, minCapacity, pageable);
             return ResponseEntity.ok(resources);
         } catch (Exception e) {
             e.printStackTrace();
@@ -84,17 +80,14 @@ public class ResourceController {
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    // 4. UPGRADED DELETE - Triggers the Soft Deletion
+    // 4. DELETE - Soft-deletes a resource (sets status to ARCHIVED)
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteResource(@PathVariable String id) {
         boolean isArchived = resourceService.softDeleteResource(id);
-        
         if (isArchived) {
-            // Returns a nice JSON message to React
-            return ResponseEntity.ok().body(Map.of("success", true, "message", "Resource archived safely."));
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("success", false, "message", "Resource not found."));
+            return ResponseEntity.noContent().build();
         }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("success", false, "message", "Resource not found."));
     }
 
     // 5. NEW: Generate QR Code for a specific resource
@@ -123,12 +116,13 @@ public class ResourceController {
         }
     }
 
-   // EXPORT ENDPOINT
-   @GetMapping("/export")
+    // EXPORT ENDPOINT
+    @GetMapping("/export")
     public void exportResourcesToCSV(
             @RequestParam(required = false, defaultValue = "") String searchTerm,
             @RequestParam(required = false, defaultValue = "ALL") String type,
             @RequestParam(required = false, defaultValue = "ALL") String status,
+            @RequestParam(required = false, defaultValue = "0") int minCapacity,
             HttpServletResponse response) throws IOException {
 
         response.setContentType("text/csv");
@@ -137,8 +131,7 @@ public class ResourceController {
         PrintWriter writer = response.getWriter();
         writer.println("Name,Type,Capacity,Location,AvailabilityWindows,Status");
 
-        // 1 & 2. Call the DB directly. Pageable.unpaged() grabs ALL matches, ignoring the 10-per-page limit.
-        Page<Resource> exportPage = resourceService.searchAndFilterResources(searchTerm, type, status, Pageable.unpaged());
+        Page<Resource> exportPage = resourceService.searchAndFilterResources(searchTerm, type, status, minCapacity, Pageable.unpaged());
         
         // Extract the raw List of data from the Page wrapper
         List<Resource> resourcesToExport = exportPage.getContent();

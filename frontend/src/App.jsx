@@ -3,23 +3,23 @@ import LoginPage from './pages/LoginPage';
 import FacilitiesPage from './pages/FacilitiesPage';
 import DashboardPage from './pages/DashboardPage';
 import ResourceMobileView from './pages/ResourceMobileView';
-import ThemeToggle from './components/ThemeToggle'; 
+import ThemeToggle from './components/ThemeToggle';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
     <Router>
-      {/* NEW: The ThemeToggle sits outside the <Routes> block. 
-        This makes it a global floating button that appears on every single page! 
-      */}
       <ThemeToggle />
-
       <Routes>
         <Route path="/" element={<LoginPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} /> 
-        <Route path="/facilities" element={<FacilitiesPage />} />
         <Route path="/resource/view/:id" element={<ResourceMobileView />} />
-        
-        {/* Catch-all route should always be the absolute last route */}
+
+        {/* Protected routes — redirect to / if not authenticated */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/facilities" element={<FacilitiesPage />} />
+        </Route>
+
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>

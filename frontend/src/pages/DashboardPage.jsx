@@ -1,38 +1,8 @@
-import { useState, useEffect } from 'react';
-import { fetchFromAPI } from '../services/api';
+import { useOutletContext } from 'react-router-dom';
 
 const DashboardPage = () => {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const userData = await fetchFromAPI('/auth/user');
-                if (userData && userData.authenticated) {
-                    setUser(userData);
-                } else {
-                    window.location.href = '/'; 
-                }
-            } catch (err) {
-                window.location.href = '/';
-            } finally {
-                setLoading(false);
-            }
-        };
-        checkAuth();
-    }, []);
-
+    const { user } = useOutletContext();
     const isAdmin = user?.roles?.includes('ROLE_ADMIN');
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center transition-colors duration-300">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                <h2 className="text-xl font-bold text-slate-800 dark:text-white">Loading Dashboard...</h2>
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-300 font-sans">
