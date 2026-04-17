@@ -67,7 +67,7 @@ public class ResourceControllerTest {
         r1.setId("1");
         
         // Tell our mock service what to return when the controller asks for data
-       when(resourceService.searchAndFilterResources(anyString(), anyString(), anyString(), any(Pageable.class)))
+        when(resourceService.searchAndFilterResources(anyString(), anyString(), anyString(), any(Integer.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(Arrays.asList(r1)));
 
         // 2 & 3. Act & Assert: Simulate a GET request and check the results
