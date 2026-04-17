@@ -21,7 +21,7 @@ const ProtectedRoute = () => {
         );
     }
 
-    return user ? <Outlet context={{ user }} /> : <Navigate to="/" replace />;
+    return user ? <Outlet context={{ user }} /> : <Navigate to="/login" replace />;
 };
 
 export default ProtectedRoute;

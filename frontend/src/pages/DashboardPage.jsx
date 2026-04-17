@@ -1,7 +1,8 @@
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 
 const DashboardPage = () => {
     const { user } = useOutletContext();
+    const navigate = useNavigate();
     const isAdmin = user?.roles?.includes('ROLE_ADMIN');
 
     return (
@@ -25,8 +26,8 @@ const DashboardPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     
                     {/* Module A */}
-                    <div 
-                        onClick={() => window.location.href = '/facilities'} 
+                    <div
+                        onClick={() => navigate('/facilities')}
                         className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-center hover:-translate-y-1 hover:shadow-md transition-all cursor-pointer flex flex-col items-center"
                     >
                         <div className="text-5xl mb-4">🏢</div>
