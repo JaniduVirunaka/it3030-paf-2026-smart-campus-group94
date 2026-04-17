@@ -6,6 +6,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.FutureOrPresent;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -21,7 +24,19 @@ public class Booking {
     @NotBlank(message = "User ID is required.")
     private String userId;
 
+    @NotBlank(message = "Student Registration Number is required.")
+    private String studentRegNumber;
+
+    @NotBlank(message = "Student Phone Number is required.")
+    @Pattern(regexp = "^\\d{10}$", message = "Phone number must be exactly 10 digits.")
+    private String studentPhone;
+
+    @NotBlank(message = "Student Email is required.")
+    @Email(message = "Please provide a valid email address.")
+    private String studentEmail;
+
     @NotNull(message = "Date is required.")
+    @FutureOrPresent(message = "Booking date cannot be in the past.")
     private LocalDate date;
 
     @NotNull(message = "Start time is required.")
@@ -33,7 +48,7 @@ public class Booking {
     @NotBlank(message = "Purpose is required.")
     private String purpose;
 
-    @Min(value = 0, message = "Expected attendees cannot be negative.")
+    @Min(value = 1, message = "Expected attendees must be at least 1.")
     private int expectedAttendees;
 
     private String status; // PENDING, APPROVED, REJECTED, CANCELLED
@@ -62,6 +77,15 @@ public class Booking {
 
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
+
+    public String getStudentRegNumber() { return studentRegNumber; }
+    public void setStudentRegNumber(String studentRegNumber) { this.studentRegNumber = studentRegNumber; }
+
+    public String getStudentPhone() { return studentPhone; }
+    public void setStudentPhone(String studentPhone) { this.studentPhone = studentPhone; }
+
+    public String getStudentEmail() { return studentEmail; }
+    public void setStudentEmail(String studentEmail) { this.studentEmail = studentEmail; }
 
     public LocalDate getDate() { return date; }
     public void setDate(LocalDate date) { this.date = date; }

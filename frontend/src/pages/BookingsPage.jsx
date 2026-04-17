@@ -121,6 +121,9 @@ const NewBookingModal = ({ resources, currentUser, onClose, onCreated }) => {
         endTime: '',
         purpose: '',
         expectedAttendees: 1,
+        studentRegNumber: '',
+        studentPhone: '',
+        studentEmail: '',
     });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -134,6 +137,13 @@ const NewBookingModal = ({ resources, currentUser, onClose, onCreated }) => {
         e.preventDefault();
         if (!form.resourceId) { setError('Please select a resource.'); return; }
         if (form.startTime >= form.endTime) { setError('End time must be after start time.'); return; }
+        if (parseInt(form.expectedAttendees, 10) < 1) { setError('Expected attendees must be at least 1.'); return; }
+        
+        const today = new Date().toISOString().split('T')[0];
+        if (form.date < today) { setError('Booking date cannot be in the past.'); return; }
+
+        if (!/^\d{10}$/.test(form.studentPhone)) { setError('Phone number must be exactly 10 digits.'); return; }
+
         setError('');
         setSubmitting(true);
         try {
@@ -215,10 +225,32 @@ const NewBookingModal = ({ resources, currentUser, onClose, onCreated }) => {
                             className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
 
+                    {/* Student Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Student Reg No *</label>
+                            <input type="text" name="studentRegNumber" required value={form.studentRegNumber} onChange={handleChange}
+                                placeholder="e.g., IT12345678"
+                                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number *</label>
+                            <input type="tel" name="studentPhone" required value={form.studentPhone} onChange={handleChange}
+                                placeholder="e.g., 0712345678" pattern="\d{10}" title="10 digit phone number"
+                                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Student Email *</label>
+                            <input type="email" name="studentEmail" required value={form.studentEmail} onChange={handleChange}
+                                placeholder="e.g., it12345678@my.sliit.lk"
+                                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                    </div>
+
                     {/* Expected attendees */}
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Expected Attendees</label>
-                        <input type="number" name="expectedAttendees" min={0} value={form.expectedAttendees} onChange={handleChange}
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Expected Attendees *</label>
+                        <input type="number" name="expectedAttendees" min={1} required value={form.expectedAttendees} onChange={handleChange}
                             className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
 
@@ -290,20 +322,20 @@ export default function BookingsPage() {
         setLoading(true);
         try {
             if (isAdmin) {
-                const data = await getAllBookings({ status: filterStatus });
+                // Fetch ALL bookings so counts work properly
+                const data = await getAllBookings({ status: 'ALL', size: 1000 });
                 setBookings(data?.content ?? []);
             } else {
                 const userId = user.email ?? user.name;
                 const data = await getUserBookings(userId);
-                const filtered = filterStatus === 'ALL' ? data : data.filter(b => b.status === filterStatus);
-                setBookings(filtered);
+                setBookings(data ?? []);
             }
         } catch {
             setToast({ type: 'error', message: 'Failed to load bookings.' });
         } finally {
             setLoading(false);
         }
-    }, [user, isAdmin, filterStatus]);
+    }, [user, isAdmin]);
 
     useEffect(() => { loadBookings(); }, [loadBookings]);
 
@@ -451,21 +483,28 @@ export default function BookingsPage() {
                         <p className="text-5xl mb-4">📭</p>
                         <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300">No bookings found</h3>
                         <p className="text-slate-400 text-sm mt-1">
-                            {filterStatus !== 'ALL' ? `No ${filterStatus.toLowerCase()} bookings.` : 'Start by clicking "New Booking".'}
+                            Start by clicking "New Booking".
                         </p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {bookings.map(booking => (
-                            <BookingCard
-                                key={booking.id}
-                                booking={booking}
-                                isAdmin={isAdmin}
-                                onApprove={handleApprove}
-                                onReject={handleReject}
-                                onCancel={handleCancel}
-                            />
+                        {bookings
+                            .filter(booking => filterStatus === 'ALL' || booking.status === filterStatus)
+                            .map(booking => (
+                                <BookingCard
+                                    key={booking.id}
+                                    booking={booking}
+                                    isAdmin={isAdmin}
+                                    onApprove={handleApprove}
+                                    onReject={handleReject}
+                                    onCancel={handleCancel}
+                                />
                         ))}
+                        {bookings.filter(booking => filterStatus === 'ALL' || booking.status === filterStatus).length === 0 && (
+                            <div className="col-span-full text-center py-12 text-slate-500">
+                                No {filterStatus.toLowerCase()} bookings found.
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -33,10 +33,12 @@ public class Resource {
     private String imageBase64;
 
     // Default Constructor
-    public Resource() {}
+    public Resource() {
+    }
 
     // All-Args Constructor
-    public Resource(String name, String type, int capacity, String location, String availabilityWindows, String status) {
+    public Resource(String name, String type, int capacity, String location, String availabilityWindows,
+            String status) {
         this.name = name;
         this.type = type;
         this.capacity = capacity;
@@ -46,28 +48,68 @@ public class Resource {
     }
 
     // --- Getters and Setters ---
-    
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getId() {
+        return id;
+    }
 
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
+    public void setId(String id) {
+        this.id = id;
+    }
 
-    public int getCapacity() { return capacity; }
-    public void setCapacity(int capacity) { this.capacity = capacity; }
+    public String getName() {
+        return name;
+    }
 
-    public String getLocation() { return location; }
-    public void setLocation(String location) { this.location = location; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public String getAvailabilityWindows() { return availabilityWindows; }
-    public void setAvailabilityWindows(String availabilityWindows) { this.availabilityWindows = availabilityWindows; }
+    public String getType() {
+        return type;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setType(String type) {
+        this.type = type;
+    }
 
-    public String getImageBase64() { return imageBase64; }
-    public void setImageBase64(String imageBase64) { this.imageBase64 = imageBase64; }
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getAvailabilityWindows() {
+        return availabilityWindows;
+    }
+
+    public void setAvailabilityWindows(String availabilityWindows) {
+        this.availabilityWindows = availabilityWindows;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getImageBase64() {
+        return imageBase64;
+    }
+
+    public void setImageBase64(String imageBase64) {
+        this.imageBase64 = imageBase64;
+    }
 }
