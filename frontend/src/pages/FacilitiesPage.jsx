@@ -12,7 +12,18 @@ const FacilitiesPage = () => {
     });
 
     const [user, setUser] = useState(null);
-    const [authLoading, setAuthLoading] = useState(true); 
+    const [authLoading, setAuthLoading] = useState(true);
+    const [bookings, setBookings] = useState([]);
+    const [bookingForm, setBookingForm] = useState({
+        resourceId: '',
+        date: '',
+        startTime: '09:00',
+        endTime: '10:00',
+        purpose: '',
+        attendees: 1
+    });
+    const [bookingMessage, setBookingMessage] = useState('');
+    const [bookingLoading, setBookingLoading] = useState(true);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -40,17 +51,35 @@ const FacilitiesPage = () => {
             try {
                 const data = await fetchFromAPI('/resources');
                 // --- FIX: If data is null or undefined, force it to be an empty array [] ---
-                setResources(data || []); 
+                setResources(data || []);
                 setLoading(false);
             } catch (err) {
                 console.error("Failed to load resources", err);
                 // Also default to empty array on error so it doesn't crash!
-                setResources([]); 
+                setResources([]);
                 setLoading(false);
             }
         };
         loadResources();
     }, []);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const loadBookings = async () => {
+            try {
+                const data = await fetchFromAPI('/bookings');
+                setBookings(data || []);
+            } catch (err) {
+                console.error('Failed to load bookings', err);
+                setBookings([]);
+            } finally {
+                setBookingLoading(false);
+            }
+        };
+
+        loadBookings();
+    }, [user]);
 
     // Only show the "Add New Resource" form IF the user has the ADMIN role
     const isAdmin = user?.roles?.includes('ROLE_ADMIN')|| user?.email === 'janiduvirunkadev@gmail.com';
@@ -73,7 +102,7 @@ const FacilitiesPage = () => {
     };
 
   // Show a loading screen while we wait for Spring Boot
-    if (authLoading || loading) {
+    if (authLoading || loading || bookingLoading) {
         return (
             <div style={{...styles.container, textAlign: 'center', paddingTop: '100px'}}>
                 <h2 style={{ color: '#2c3e50' }}>Verifying Credentials & Loading Hub...</h2>
@@ -108,6 +137,67 @@ const FacilitiesPage = () => {
         setFormData(resource);
         setEditingId(resource.id);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleBookingChange = (e) => {
+        const value = e.target.name === 'attendees' ? Number(e.target.value) : e.target.value;
+        setBookingForm({
+            ...bookingForm,
+            [e.target.name]: value,
+        });
+    };
+
+    const refreshBookings = async () => {
+        try {
+            const data = await fetchFromAPI('/bookings');
+            setBookings(data || []);
+        } catch (err) {
+            console.error('Failed to refresh bookings', err);
+        }
+    };
+
+    const handleBookingSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const created = await fetchFromAPI('/bookings', {
+                method: 'POST',
+                body: JSON.stringify(bookingForm),
+            });
+            setBookings((prev) => [...prev, created]);
+            setBookingMessage('Booking request submitted and pending approval.');
+            setBookingForm({ resourceId: '', date: '', startTime: '09:00', endTime: '10:00', purpose: '', attendees: 1 });
+        } catch (err) {
+            setBookingMessage('Failed to submit booking. Check the details or try a different time slot.');
+        }
+    };
+
+    const handleApproveBooking = async (id) => {
+        try {
+            await fetchFromAPI(`/bookings/${id}/approve`, { method: 'PATCH' });
+            await refreshBookings();
+        } catch (err) {
+            alert('Unable to approve booking.');
+        }
+    };
+
+    const handleRejectBooking = async (id) => {
+        const reason = window.prompt('Please provide a reason for rejection:');
+        if (!reason) return;
+        try {
+            await fetchFromAPI(`/bookings/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ reason }) });
+            await refreshBookings();
+        } catch (err) {
+            alert('Unable to reject booking.');
+        }
+    };
+
+    const handleCancelBooking = async (id) => {
+        try {
+            await fetchFromAPI(`/bookings/${id}/cancel`, { method: 'PATCH' });
+            await refreshBookings();
+        } catch (err) {
+            alert('Unable to cancel booking.');
+        }
     };
 
     const handleDelete = async (id) => {
@@ -207,6 +297,80 @@ const FacilitiesPage = () => {
                             ))}
                             {filteredResources.length === 0 && (
                                 <tr><td colSpan={isAdmin ? "7" : "6"} style={{...styles.td, textAlign: 'center', padding: '30px', color: '#7f8c8d'}}>No resources match your search criteria.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style={styles.card}>
+                <h3 style={{ marginTop: 0, color: '#2c3e50', marginBottom: '20px' }}>📅 Booking Requests</h3>
+                <p style={{ marginBottom: '20px', color: '#57606f' }}>
+                    {isAdmin ? 'Review all booking requests and prevent conflicts across campus assets.' : 'Request a booking for one of the available resources. Admin review is required before approval.'}
+                </p>
+
+                <form onSubmit={handleBookingSubmit} style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '25px' }}>
+                    <select name="resourceId" value={bookingForm.resourceId} onChange={handleBookingChange} required style={styles.input}>
+                        <option value="">Select resource</option>
+                        {resources.map((resource) => (
+                            <option key={resource.id} value={resource.id}>{resource.name} ({resource.type.replace('_', ' ')})</option>
+                        ))}
+                    </select>
+                    <input type="date" name="date" value={bookingForm.date} onChange={handleBookingChange} required style={styles.input} />
+                    <input type="time" name="startTime" value={bookingForm.startTime} onChange={handleBookingChange} required style={styles.input} />
+                    <input type="time" name="endTime" value={bookingForm.endTime} onChange={handleBookingChange} required style={styles.input} />
+                    <input type="text" name="purpose" placeholder="Purpose" value={bookingForm.purpose} onChange={handleBookingChange} required style={styles.input} />
+                    <input type="number" name="attendees" min="1" value={bookingForm.attendees} onChange={handleBookingChange} required style={styles.input} />
+                    <button type="submit" style={styles.buttonPrimary}>Submit Booking</button>
+                </form>
+
+                {bookingMessage && <p style={{ marginBottom: '20px', color: '#2c3e50' }}>{bookingMessage}</p>}
+
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={styles.table}>
+                        <thead>
+                            <tr>
+                                <th style={styles.th}>Resource</th>
+                                <th style={styles.th}>Date</th>
+                                <th style={styles.th}>Time</th>
+                                <th style={styles.th}>Purpose</th>
+                                <th style={styles.th}>Attendees</th>
+                                <th style={styles.th}>Status</th>
+                                <th style={styles.th}>Requested By</th>
+                                <th style={styles.th}>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(Array.isArray(bookings) ? bookings : []).map((booking) => (
+                                <tr key={booking.id} style={{ transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                    <td style={styles.td}>{booking.resourceName}</td>
+                                    <td style={styles.td}>{booking.date}</td>
+                                    <td style={styles.td}>{booking.startTime} - {booking.endTime}</td>
+                                    <td style={styles.td}>{booking.purpose}</td>
+                                    <td style={styles.td}>{booking.attendees}</td>
+                                    <td style={styles.td}>
+                                        <span style={booking.status === 'APPROVED' ? { ...styles.badgeActive, color: '#155724', backgroundColor: '#d4edda' } : booking.status === 'REJECTED' ? { ...styles.badgeInactive, backgroundColor: '#f8d7da', color: '#721c24' } : booking.status === 'CANCELLED' ? { ...styles.badgeInactive, backgroundColor: '#fff3cd', color: '#856404' } : styles.badgeActive}>
+                                            {booking.status.replace('_', ' ')}
+                                        </span>
+                                    </td>
+                                    <td style={styles.td}>{booking.requestedByEmail}</td>
+                                    <td style={styles.td}>
+                                        {isAdmin && booking.status === 'PENDING' && (
+                                            <>
+                                                <button onClick={() => handleApproveBooking(booking.id)} style={styles.buttonEdit}>Approve</button>
+                                                <button onClick={() => handleRejectBooking(booking.id)} style={styles.buttonDelete}>Reject</button>
+                                            </>
+                                        )}
+                                        {(booking.status === 'APPROVED' || booking.status === 'PENDING') && (
+                                            <button onClick={() => handleCancelBooking(booking.id)} style={{ ...styles.buttonDelete, backgroundColor: booking.status === 'APPROVED' ? '#ff8c00' : '#c0392b' }}>
+                                                Cancel
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                            {(Array.isArray(bookings) && bookings.length === 0) && (
+                                <tr><td colSpan="8" style={{ ...styles.td, textAlign: 'center', padding: '30px', color: '#7f8c8d' }}>No booking requests found.</td></tr>
                             )}
                         </tbody>
                     </table>
