@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchFromAPI } from '../services/api';
+import NotificationsPanel from '../components/NotificationsPanel';
 
 const DashboardPage = () => {
     const [user, setUser] = useState(null);
@@ -94,6 +95,12 @@ const DashboardPage = () => {
                     </div>
 
                 </div>
+
+                {user.email && (
+                    <div className="mt-10">
+                        <NotificationsPanel userId={user.email} />
+                    </div>
+                )}
             </div>
         </div>
     );

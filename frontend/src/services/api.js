@@ -1,18 +1,17 @@
 import axios from 'axios';
-// Base configuration for all backend requests
-const BASE_URL = '/api';
 
-const API = axios.create({ baseURL: process.env.REACT_APP_API_URL });
+const API = axios.create({
+    baseURL: '/api',
+    withCredentials: true,
+});
 
 export const getNotifications = (userId) => API.get(`/notifications?userId=${userId}`);
 export const markNotificationRead = (id) => API.patch(`/notifications/${id}/read`);
 
 export const fetchFromAPI = async (endpoint, options = {}) => {
     try {
-        const response = await fetch(`${BASE_URL}${endpoint}`, {
-            // --- THIS IS THE CRITICAL FIX ---
-            // This tells the browser to send your Google Login session cookie!
-            credentials: 'include', 
+        const response = await fetch(`/api${endpoint}`, {
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 ...options.headers,
@@ -24,8 +23,6 @@ export const fetchFromAPI = async (endpoint, options = {}) => {
             throw new Error(`API error: ${response.status}`);
         }
 
-        // If the server returns 204 No Content (like our DELETE method does), 
-        // just return null instead of trying to parse empty data into JSON.
         if (response.status === 204) {
             return null;
         }
