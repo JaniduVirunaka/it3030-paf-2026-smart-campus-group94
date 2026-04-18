@@ -1,4 +1,5 @@
 import { useOutletContext, useNavigate } from 'react-router-dom';
+import NotificationsPanel from '../components/NotificationsPanel';
 
 const DashboardPage = () => {
     const { user } = useOutletContext();
@@ -65,6 +66,12 @@ const DashboardPage = () => {
                     </div>
 
                 </div>
+
+                {user?.email && (
+                    <div className="mt-10">
+                        <NotificationsPanel userId={user.email} />
+                    </div>
+                )}
             </div>
         </div>
     );

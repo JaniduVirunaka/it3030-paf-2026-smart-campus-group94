@@ -1,5 +1,11 @@
-// Base configuration for all backend requests
+import axios from 'axios';
+
 const BASE_URL = '/api';
+
+const API = axios.create({ baseURL: '/api', withCredentials: true });
+
+export const getNotifications = (userId) => API.get(`/notifications?userId=${userId}`);
+export const markNotificationRead = (id) => API.patch(`/notifications/${id}/read`);
 
 export const fetchFromAPI = async (endpoint, options = {}) => {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
