@@ -2,12 +2,14 @@ package com.backend.backend.config;
 
 import com.backend.backend.services.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -23,12 +25,19 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
+
+    @Value("${app.admin.emails:}")
+    private String adminEmailsConfig;
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
@@ -83,7 +92,7 @@ public class SecurityConfig {
         return authProvider;
     }
 
-    // The Google Admin logic (unchanged)
+    // The Google Admin logic — admin emails sourced from app.admin.emails property
     @Bean
     public OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService() {
         final OidcUserService delegate = new OidcUserService();
@@ -92,12 +101,22 @@ public class SecurityConfig {
             OidcUser oidcUser = delegate.loadUser(userRequest);
             Set<GrantedAuthority> mappedAuthorities = new HashSet<>(oidcUser.getAuthorities());
 
-            if ("janiduvirunkadev@gmail.com".equals(oidcUser.getEmail())) {
+            if (isAdminEmail(oidcUser.getEmail())) {
                 mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
             }
             mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_USER"));
 
             return new DefaultOidcUser(mappedAuthorities, oidcUser.getIdToken(), oidcUser.getUserInfo());
         };
+    }
+
+    private boolean isAdminEmail(String email) {
+        if (adminEmailsConfig == null || adminEmailsConfig.trim().isEmpty()) {
+            return false;
+        }
+        List<String> adminEmails = Arrays.stream(adminEmailsConfig.split(","))
+                .map(String::trim)
+                .collect(Collectors.toList());
+        return adminEmails.contains(email);
     }
 }

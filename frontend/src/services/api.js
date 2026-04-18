@@ -2,31 +2,31 @@
 const BASE_URL = '/api';
 
 export const fetchFromAPI = async (endpoint, options = {}) => {
-    try {
-        const response = await fetch(`${BASE_URL}${endpoint}`, {
-            // --- THIS IS THE CRITICAL FIX ---
-            // This tells the browser to send your Google Login session cookie!
-            credentials: 'include', 
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers,
-            },
-            ...options,
-        });
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+        // Send session cookie on every request so Spring Security stays authenticated
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+        },
+        ...options,
+    });
 
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-        }
-
-        // If the server returns 204 No Content (like our DELETE method does), 
-        // just return null instead of trying to parse empty data into JSON.
-        if (response.status === 204) {
-            return null;
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error("Failed to fetch data:", error);
-        throw error;
+    // 204 No Content (e.g. DELETE) — nothing to parse
+    if (response.status === 204) {
+        return null;
     }
+
+    // Parse JSON body for ALL responses (including 4xx/5xx)
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+        // Throw an error that carries the real backend message (e.g. "Invalid email or password")
+        const err = new Error(data?.message || `Request failed: ${response.status}`);
+        err.status = response.status;
+        err.data = data;
+        throw err;
+    }
+
+    return data;
 };

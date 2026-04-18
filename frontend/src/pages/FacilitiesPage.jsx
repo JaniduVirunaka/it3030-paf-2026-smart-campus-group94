@@ -16,6 +16,7 @@ const FacilitiesPage = () => {
         name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE', imageBase64: ''
     });
     const [fieldErrors, setFieldErrors] = useState({});
+    const [pageError, setPageError] = useState('');
 
     // --- CSV Export/Import States ---
     const [isExporting, setIsExporting] = useState(false);
@@ -45,8 +46,7 @@ const FacilitiesPage = () => {
                 setTotalPages(data.totalPages || 0);
                 setTotalElements(data.totalElements || 0);
                 setLoading(false);
-            } catch (err) {
-                console.error("Failed to load resources", err);
+            } catch {
                 setResources([]);
                 setLoading(false);
             }
@@ -80,6 +80,7 @@ const FacilitiesPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setFieldErrors({});
+        setPageError('');
 
         try {
             const url = editingId ? `/api/resources/${editingId}` : `/api/resources`;
@@ -115,9 +116,8 @@ const FacilitiesPage = () => {
             
             setFormData({ name: '', type: 'LECTURE_HALL', capacity: '', location: '', availabilityWindows: '', status: 'ACTIVE', imageBase64: '' });
             
-        } catch (err) {
-            console.error("Save error:", err);
-            alert("An unexpected error occurred while saving.");
+        } catch {
+            setPageError('An unexpected error occurred while saving.');
         }
     };
 
@@ -132,8 +132,8 @@ const FacilitiesPage = () => {
         try {
             await fetchFromAPI(`/resources/${id}`, { method: 'DELETE' });
             setResources(resources.filter(r => r.id !== id));
-        } catch (err) {
-            alert("Failed to delete.");
+        } catch {
+            setPageError('Failed to delete resource.');
         }
     };
 
@@ -156,9 +156,8 @@ const FacilitiesPage = () => {
             document.body.appendChild(link);
             link.click();
             link.parentNode.removeChild(link);
-        } catch (err) {
-            console.error(err);
-            alert("Failed to export data.");
+        } catch {
+            setPageError('Failed to export data.');
         } finally {
             setIsExporting(false);
         }
@@ -187,12 +186,11 @@ const FacilitiesPage = () => {
             setResources(refreshedData.content || []);
             setTotalPages(refreshedData.totalPages || 0);
             setTotalElements(refreshedData.totalElements || 0);
-        } catch (err) {
-            console.error(err);
-            alert("Failed to import data.");
+        } catch {
+            setPageError('Failed to import data.');
         } finally {
             setIsImporting(false);
-            e.target.value = null; 
+            e.target.value = null;
         }
     };
 
@@ -215,9 +213,8 @@ const FacilitiesPage = () => {
             document.body.appendChild(link);
             link.click();
             link.parentNode.removeChild(link);
-        } catch (err) {
-            console.error(err);
-            alert("Failed to download QR Code.");
+        } catch {
+            setPageError('Failed to download QR Code.');
         }
     };
 
@@ -233,7 +230,15 @@ const FacilitiesPage = () => {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-10 px-4 sm:px-6 lg:px-8 font-sans transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
-                
+
+                {/* Page-level error banner */}
+                {pageError && (
+                    <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-red-800 dark:text-red-300">{pageError}</p>
+                        <button onClick={() => setPageError('')} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 text-lg font-bold leading-none" aria-label="Dismiss error">×</button>
+                    </div>
+                )}
+
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                     <div>

@@ -5,6 +5,7 @@ import com.backend.backend.services.ResourceService;
 import com.backend.backend.utils.QRCodeGenerator;
 import org.springframework.http.MediaType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,8 +30,11 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/resources")
-@CrossOrigin(origins = "http://localhost:5173") 
+@CrossOrigin(origins = "http://localhost:5173")
 public class ResourceController {
+
+    @Value("${app.qr.base-url}")
+    private String qrBaseUrl;
 
     @Autowired
     private ResourceService resourceService;
@@ -99,10 +103,8 @@ public class ResourceController {
             if (resourceOpt.isPresent()) {
                 Resource resource = resourceOpt.get();
                 
-                String publicUrl = "https://ensure-alkalize-petal.ngrok-free.dev"; 
-                
                 // 2. We route it to a specific "mobile view" page
-                String qrText = publicUrl + "/resource/view/" + resource.getId();
+                String qrText = qrBaseUrl + "/resource/view/" + resource.getId();
 
                 // Generate a 250x250 pixel QR code
                 byte[] image = QRCodeGenerator.getQRCodeImage(qrText, 250, 250);

@@ -12,8 +12,8 @@ const ResourceMobileView = () => {
             try {
                 const data = await fetchFromAPI(`/resources/${id}`);
                 setResource(data);
-            } catch (err) {
-                console.error("Failed to load resource", err);
+            } catch {
+                // resource stays null; the "not found" UI renders below
             } finally {
                 setLoading(false);
             }

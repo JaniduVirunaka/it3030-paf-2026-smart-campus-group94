@@ -47,7 +47,11 @@ const LoginPage = () => {
                 setError(response?.message || 'Authentication failed.');
             }
         } catch (err) {
-            setError('Could not connect to the server. Is Spring Boot running?');
+            // Show the real backend message (e.g. "Invalid email or password")
+            // Fall back to connection error only if there's truly no message
+            setError(err.message && !err.message.startsWith('Request failed')
+                ? err.message
+                : 'Could not connect to the server. Is Spring Boot running?');
         } finally {
             setLoading(false);
         }

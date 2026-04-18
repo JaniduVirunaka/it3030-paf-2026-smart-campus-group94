@@ -5,6 +5,7 @@ import com.backend.backend.repositories.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -16,7 +17,9 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,6 +27,9 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+
+    @Value("${app.admin.emails:}")
+    private String adminEmailsConfig;
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -33,6 +39,16 @@ public class AuthController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    private boolean isAdminEmail(String email) {
+        if (adminEmailsConfig == null || adminEmailsConfig.trim().isEmpty()) {
+            return false;
+        }
+        List<String> adminEmails = Arrays.stream(adminEmailsConfig.split(","))
+                .map(String::trim)
+                .collect(Collectors.toList());
+        return adminEmails.contains(email);
+    }
 
     // 1. STANDARD LOGIN ENDPOINT
     @PostMapping("/login")
@@ -64,8 +80,8 @@ public class AuthController {
         Set<String> roles = new HashSet<>();
         roles.add("ROLE_USER"); // Everyone gets USER
 
-        // The Magic Admin Rule: If the email has "@admin" in it, give them superpowers
-        if (request.getEmail().contains("@admin")) {
+        // Grant ADMIN role only to emails on the configurable allowlist
+        if (isAdminEmail(request.getEmail())) {
             roles.add("ROLE_ADMIN");
         }
 
