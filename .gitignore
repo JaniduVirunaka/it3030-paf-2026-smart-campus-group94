@@ -30,6 +30,8 @@ HELP.md
 # Secrets
 secret.properties
 *.local
+*.env
+backend/node_modules/
 
 # ─── IDEs & Editors ──────────────────────────────────────────
 .idea/
