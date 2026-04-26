@@ -6,6 +6,8 @@ import DashboardPage from './pages/DashboardPage';
 import ResourceMobileView from './pages/ResourceMobileView';
 import BookingsPage from './pages/BookingsPage';
 import ProfilePage from './pages/ProfilePage';
+import SubmitTicketPage from './pages/SubmitTicketPage';
+import TicketsListPage from './pages/TicketsListPage';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -28,6 +30,8 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/facilities" element={<FacilitiesPage />} />
             <Route path="/bookings" element={<BookingsPage />} />
+            <Route path="/tickets" element={<TicketsListPage />} />
+            <Route path="/tickets/new" element={<SubmitTicketPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
         </Route>

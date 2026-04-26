@@ -53,7 +53,7 @@ const DashboardPage = () => {
 
                     {/* Module C */}
                     <div 
-                        onClick={() => alert("Module C: Ticketing coming soon!")} 
+                        onClick={() => navigate('/tickets')} 
                         className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 text-center hover:-translate-y-1 hover:shadow-md transition-all cursor-pointer flex flex-col items-center"
                     >
                         <div className="text-5xl mb-4">🛠️</div>

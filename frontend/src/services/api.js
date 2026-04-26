@@ -36,3 +36,32 @@ export const fetchFromAPI = async (endpoint, options = {}) => {
 
     return data;
 };
+
+// --- Tickets (Member 3) ---
+export const getTickets = () => fetchFromAPI('/tickets');
+export const getTicketById = (id) => fetchFromAPI(`/tickets/${id}`);
+export const createTicket = (ticket) => fetchFromAPI('/tickets', {
+    method: 'POST',
+    body: JSON.stringify(ticket)
+});
+export const updateTicket = (id, ticket) => fetchFromAPI(`/tickets/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(ticket)
+});
+export const deleteTicket = (id) => fetchFromAPI(`/tickets/${id}`, {
+    method: 'DELETE'
+});
+
+// --- Ticket Comments (Member 3) ---
+export const getTicketComments = (ticketId) => fetchFromAPI(`/tickets/comments/ticket/${ticketId}`);
+export const addTicketComment = (comment) => fetchFromAPI('/tickets/comments', {
+    method: 'POST',
+    body: JSON.stringify(comment)
+});
+export const deleteTicketComment = (id) => fetchFromAPI(`/tickets/comments/${id}`, {
+    method: 'DELETE'
+});
+export const updateTicketComment = (id, content) => fetchFromAPI(`/tickets/comments/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ content })
+});
