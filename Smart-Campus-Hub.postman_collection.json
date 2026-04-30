@@ -1,0 +1,788 @@
+{
+  "info": {
+    "name": "Smart Campus Hub API",
+    "description": "Complete API collection for the Smart Campus Hub — covers Auth, Resources, Bookings, Tickets, Ticket Comments, and Notifications.\n\nSet the `baseUrl` collection variable to your running backend (default: http://localhost:8080).\n\nRun the **Auth / Login** request first so the session cookie is captured automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",    "value": "http://localhost:8080",  "type": "string" },
+    { "key": "bookingId",  "value": "",                       "type": "string" },
+    { "key": "resourceId", "value": "",                       "type": "string" },
+    { "key": "ticketId",   "value": "",                       "type": "string" },
+    { "key": "commentId",  "value": "",                       "type": "string" },
+    { "key": "notifId",    "value": "",                       "type": "string" },
+    { "key": "userEmail",  "value": "user@test.com",          "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "Auth",
+      "item": [
+
+        {
+          "name": "Register User",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('success flag is true', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.success).to.be.true;",
+            "});"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"Password123!\",\n  \"displayName\": \"Test User\",\n  \"registrationNumber\": \"IT21000001\",\n  \"phone\": \"0771234567\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Register – Duplicate Email (expect 400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
+            "pm.test('Error message present', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.message).to.include('already in use');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('success flag is true', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.success).to.be.true;",
+            "});"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Login – Wrong Password (expect 401)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));",
+            "pm.test('Error message present', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.success).to.be.false;",
+            "});"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"wrongpassword\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Get Current User",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('authenticated is true', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.authenticated).to.be.true;",
+            "  pm.expect(json.email).to.be.a('string');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/user"
+          }
+        },
+
+        {
+          "name": "Get Profile",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Has email field', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.email).to.be.a('string');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/profile"
+          }
+        },
+
+        {
+          "name": "Update Profile",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('success flag is true', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.success).to.be.true;",
+            "});"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/auth/profile",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Updated Name\",\n  \"registrationNumber\": \"IT21000001\",\n  \"phone\": \"0779876543\"\n}"
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "Resources",
+      "item": [
+
+        {
+          "name": "Get All Resources",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Response has content array', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.content).to.be.an('array');",
+            "  pm.expect(json).to.have.property('totalElements');",
+            "});",
+            "if (pm.response.json().content.length > 0) {",
+            "  pm.collectionVariables.set('resourceId', pm.response.json().content[0].id);",
+            "}"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/resources?searchTerm=&type=ALL&status=ALL&page=0&size=10",
+              "query": [
+                { "key": "searchTerm", "value": "" },
+                { "key": "type",       "value": "ALL" },
+                { "key": "status",     "value": "ALL" },
+                { "key": "page",       "value": "0" },
+                { "key": "size",       "value": "10" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Get Resources – Search by Name",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Results returned', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.content).to.be.an('array');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/resources?searchTerm=lab&type=ALL&status=ALL",
+              "query": [
+                { "key": "searchTerm", "value": "lab" },
+                { "key": "type",       "value": "ALL" },
+                { "key": "status",     "value": "ALL" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Create Resource (Admin)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+            "pm.test('Resource created with correct name', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.name).to.eql('API Test Lab');",
+            "  pm.expect(json.status).to.eql('ACTIVE');",
+            "});",
+            "pm.collectionVariables.set('resourceId', pm.response.json().id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/resources",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"API Test Lab\",\n  \"type\": \"LAB\",\n  \"capacity\": 40,\n  \"location\": \"Block C, Room 301\",\n  \"availabilityWindows\": \"08:00-17:00\",\n  \"status\": \"ACTIVE\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Create Resource – Validation Error (expect 400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
+            "pm.test('Errors object present', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.errors).to.be.an('object');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/resources",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"type\": \"\",\n  \"capacity\": -1,\n  \"location\": \"\",\n  \"availabilityWindows\": \"\",\n  \"status\": \"\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Get Resource by ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Resource ID matches', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.id).to.eql(pm.collectionVariables.get('resourceId'));",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/resources/{{resourceId}}"
+          }
+        },
+
+        {
+          "name": "Get Resource by ID – Not Found (expect 404)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/resources/nonexistent-id-99999"
+          }
+        },
+
+        {
+          "name": "Update Resource (Admin)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Capacity updated', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.capacity).to.eql(50);",
+            "});"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/resources/{{resourceId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"API Test Lab\",\n  \"type\": \"LAB\",\n  \"capacity\": 50,\n  \"location\": \"Block C, Room 301\",\n  \"availabilityWindows\": \"08:00-18:00\",\n  \"status\": \"ACTIVE\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Get Resource Statistics (Admin)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/resources/stats"
+          }
+        },
+
+        {
+          "name": "Delete Resource (Admin)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/resources/{{resourceId}}"
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "Bookings",
+      "item": [
+
+        {
+          "name": "Get Booked Slots",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Returns an array', () => {",
+            "  pm.expect(pm.response.json()).to.be.an('array');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/booked-slots?resourceId={{resourceId}}&date=2027-06-15",
+              "query": [
+                { "key": "resourceId", "value": "{{resourceId}}" },
+                { "key": "date",       "value": "2027-06-15" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Create Booking",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+            "pm.test('Booking status is PENDING', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.status).to.eql('PENDING');",
+            "});",
+            "pm.collectionVariables.set('bookingId', pm.response.json().id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/bookings",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceId\": \"{{resourceId}}\",\n  \"userId\": \"{{userEmail}}\",\n  \"studentRegNumber\": \"IT21000001\",\n  \"studentPhone\": \"0771234567\",\n  \"studentEmail\": \"{{userEmail}}\",\n  \"date\": \"2027-06-15\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"11:00\",\n  \"purpose\": \"Postman test booking\",\n  \"expectedAttendees\": 10\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Create Booking – Invalid Phone (expect 400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
+            "pm.test('studentPhone error present', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.errors).to.have.property('studentPhone');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/bookings",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceId\": \"{{resourceId}}\",\n  \"userId\": \"{{userEmail}}\",\n  \"studentRegNumber\": \"IT21000001\",\n  \"studentPhone\": \"123\",\n  \"studentEmail\": \"{{userEmail}}\",\n  \"date\": \"2027-06-15\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"11:00\",\n  \"purpose\": \"Test\",\n  \"expectedAttendees\": 5\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Get My Bookings",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Returns an array', () => {",
+            "  pm.expect(pm.response.json()).to.be.an('array');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/bookings/user/{{userEmail}}"
+          }
+        },
+
+        {
+          "name": "Get Booking by ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Booking ID matches', () => {",
+            "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('bookingId'));",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/bookings/{{bookingId}}"
+          }
+        },
+
+        {
+          "name": "Get All Bookings – Admin View (paginated)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Has content array', () => {",
+            "  pm.expect(pm.response.json().content).to.be.an('array');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings?status=ALL&page=0&size=10",
+              "query": [
+                { "key": "status", "value": "ALL" },
+                { "key": "page",   "value": "0" },
+                { "key": "size",   "value": "10" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Approve Booking (Admin)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Status is APPROVED', () => {",
+            "  pm.expect(pm.response.json().status).to.eql('APPROVED');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/bookings/{{bookingId}}/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Reject Booking (Admin)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK or 400', () => {",
+            "  pm.expect([200, 400]).to.include(pm.response.code);",
+            "});"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/bookings/{{bookingId}}/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"REJECTED\",\n  \"rejectionReason\": \"Room under scheduled maintenance\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Update Status – Missing Status Field (expect 400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
+            "pm.test('Error message present', () => {",
+            "  pm.expect(pm.response.json().message).to.include('Status is required');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/bookings/{{bookingId}}/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejectionReason\": \"No status field\"\n}"
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "Tickets",
+      "item": [
+
+        {
+          "name": "Create Ticket",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Ticket status is OPEN', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.status).to.eql('OPEN');",
+            "});",
+            "pm.collectionVariables.set('ticketId', pm.response.json().id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/tickets",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceId\": \"{{resourceId}}\",\n  \"resourceName\": \"Test Resource\",\n  \"category\": \"HARDWARE\",\n  \"priority\": \"HIGH\",\n  \"description\": \"The projector bulb is completely blown and needs immediate replacement.\",\n  \"contactDetails\": \"0771234567\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Create Ticket – Short Description (expect 400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
+            "pm.test('Description error present', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.errors).to.have.property('description');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/tickets",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceId\": \"{{resourceId}}\",\n  \"category\": \"HARDWARE\",\n  \"priority\": \"LOW\",\n  \"description\": \"Too short\",\n  \"contactDetails\": \"0771234567\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Get My Tickets",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Returns an array', () => {",
+            "  pm.expect(pm.response.json()).to.be.an('array');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/tickets"
+          }
+        },
+
+        {
+          "name": "Get Ticket by ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Ticket ID matches', () => {",
+            "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('ticketId'));",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}"
+          }
+        },
+
+        {
+          "name": "Get Ticket by ID – Not Found (expect 404)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/tickets/nonexistent-ticket-id"
+          }
+        },
+
+        {
+          "name": "Update Ticket Status (Admin)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Status is IN_PROGRESS', () => {",
+            "  pm.expect(pm.response.json().status).to.eql('IN_PROGRESS');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"technicianId\": \"technician@campus.com\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Resolve Ticket (Admin)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Status is RESOLVED', () => {",
+            "  pm.expect(pm.response.json().status).to.eql('RESOLVED');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"RESOLVED\",\n  \"resolutionNotes\": \"Replaced projector bulb. Unit tested and confirmed working.\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Delete Ticket",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Deletion confirmed', () => {",
+            "  pm.expect(pm.response.json().message).to.include('deleted');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/tickets/{{ticketId}}"
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "Ticket Comments",
+      "item": [
+
+        {
+          "name": "Add Comment to Ticket",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Comment has content', () => {",
+            "  const json = pm.response.json();",
+            "  pm.expect(json.content).to.be.a('string');",
+            "});",
+            "pm.collectionVariables.set('commentId', pm.response.json().id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/tickets/comments",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticketId\": \"{{ticketId}}\",\n  \"userName\": \"Test User\",\n  \"content\": \"Technician confirmed the issue. Parts have been ordered.\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Get Comments for Ticket",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Returns an array', () => {",
+            "  pm.expect(pm.response.json()).to.be.an('array');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/tickets/comments/ticket/{{ticketId}}"
+          }
+        },
+
+        {
+          "name": "Update Comment",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Content updated', () => {",
+            "  pm.expect(pm.response.json().content).to.include('Updated');",
+            "});"
+          ]}}],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/tickets/comments/{{commentId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated: Parts have arrived. Repair scheduled for tomorrow.\"\n}"
+            }
+          }
+        },
+
+        {
+          "name": "Delete Comment",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/tickets/comments/{{commentId}}"
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "Notifications",
+      "item": [
+
+        {
+          "name": "Get My Notifications",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Returns an array', () => {",
+            "  pm.expect(pm.response.json()).to.be.an('array');",
+            "});",
+            "if (pm.response.json().length > 0) {",
+            "  pm.collectionVariables.set('notifId', pm.response.json()[0].id);",
+            "}"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?userId={{userEmail}}",
+              "query": [{ "key": "userId", "value": "{{userEmail}}" }]
+            }
+          }
+        },
+
+        {
+          "name": "Get Notifications – Wrong User (expect 403)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 403 Forbidden', () => pm.response.to.have.status(403));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?userId=someoneelse@test.com",
+              "query": [{ "key": "userId", "value": "someoneelse@test.com" }]
+            }
+          }
+        },
+
+        {
+          "name": "Get Notifications – Blank UserId (expect 400)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?userId=",
+              "query": [{ "key": "userId", "value": "" }]
+            }
+          }
+        },
+
+        {
+          "name": "Mark Notification as Read",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('read flag is true', () => {",
+            "  pm.expect(pm.response.json().read).to.be.true;",
+            "});"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/notifications/{{notifId}}/read"
+          }
+        },
+
+        {
+          "name": "Mark Notification – Not Found (expect 404)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));"
+          ]}}],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/notifications/nonexistent-notif-id/read"
+          }
+        }
+
+      ]
+    }
+
+  ]
+}

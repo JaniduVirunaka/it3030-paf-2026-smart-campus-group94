@@ -13,7 +13,10 @@ export default defineConfig({
   // @ts-ignore
   workers: process.env.CI ? 1 : undefined,
   
-  reporter: 'html',
+  // @ts-ignore
+  reporter: process.env.CI
+    ? [['html', { open: 'never' }], ['junit', { outputFile: 'test-results/junit.xml' }]]
+    : 'html',
   
   use: {
     baseURL: 'http://localhost:5173',
